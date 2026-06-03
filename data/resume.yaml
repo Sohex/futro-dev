@@ -67,6 +67,7 @@ experience:
       - company: Charter Communications
         role: DevOps Engineer (Contract)
         location: Denver, CO
+        # `when` is a display-ready string (dual ranges possible) — render verbatim, never date-parse
         when: Aug 2019 – Dec 2019 & Mar 2018 – Jun 2018
         bullets:
           - >-
