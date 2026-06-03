@@ -1,0 +1,30 @@
+baseURL = "https://futro.dev/"
+locale = "en-us"
+title = "Conor Futro"
+timeZone = "America/Denver"
+enableRobotsTXT = true
+refLinksErrorLevel = "ERROR"
+disableKinds = ["taxonomy", "term"]
+
+[outputs]
+  home = ["HTML"]          # site-level RSS disabled; posts section feed is canonical
+  section = ["HTML", "RSS"]
+
+[services.rss]
+  limit = 20
+
+[markup.highlight]
+  codeFences = false       # plain code blocks; class-based chroma can come later
+
+[params]
+  description = "Notes on infrastructure, platforms, and running things well."
+  email = "futro.conor@gmail.com"
+  matrix = "@conor:futro.dev"
+
+[[params.social]]
+  name = "GitHub"
+  url = "https://github.com/Sohex"
+
+[[params.social]]
+  name = "LinkedIn"
+  url = "https://www.linkedin.com/in/cfutro"
