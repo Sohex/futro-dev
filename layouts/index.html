@@ -1,0 +1,30 @@
+{{ define "main" }}
+<section class="intro">
+  {{ .Content }}
+</section>
+
+{{ with first 5 (where site.RegularPages "Section" "posts") }}
+<section>
+  <h2>Recent posts</h2>
+  <ul class="item-list">
+    {{ range . }}
+    <li>
+      <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+      <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "Jan 2006" }}</time>
+    </li>
+    {{ end }}
+  </ul>
+</section>
+{{ end }}
+
+{{ with where site.RegularPages "Section" "projects" }}
+<section>
+  <h2>Projects</h2>
+  <ul class="item-list">
+    {{ range . }}
+    <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+    {{ end }}
+  </ul>
+</section>
+{{ end }}
+{{ end }}
