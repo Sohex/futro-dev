@@ -1,0 +1,8 @@
+<footer class="site-footer">
+  <p>
+    <a href="mailto:{{ site.Params.email }}">{{ site.Params.email }}</a>
+    {{- range site.Params.social }} · <a href="{{ .url }}" rel="me">{{ .name }}</a>{{ end }}
+    · <span title="Matrix">{{ site.Params.matrix }}</span>
+    · <a href="/posts/index.xml">rss</a>
+  </p>
+</footer>
