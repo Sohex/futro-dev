@@ -5,6 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 BIN="${TOOLS_BIN:-$HOME/.local/bin}"
 mkdir -p "$BIN"
+CLEANUP_DIRS=()
+trap 'rm -rf "${CLEANUP_DIRS[@]:-}"' EXIT
 
 latest_tag() {
   curl -fsSL "https://api.github.com/repos/$1/releases/latest" | jq -r .tag_name
@@ -41,7 +43,7 @@ install_release() { # repo tag asset_regex binary_name
   [[ -n "$url" ]] || { echo "ERROR: no asset for $repo $tag matching $regex" >&2; exit 1; }
   local tmp
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' RETURN
+  CLEANUP_DIRS+=("$tmp")
   curl -fsSL "$url" -o "$tmp/pkg"
   case "$url" in
     *.tar.gz|*.tgz) tar -xzf "$tmp/pkg" -C "$tmp" ;;
