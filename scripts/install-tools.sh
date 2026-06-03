@@ -11,11 +11,15 @@ latest_tag() {
 }
 
 if [[ "${1:-}" == "--update" ]]; then
+  hugo_tag=$(latest_tag gohugoio/hugo)
+  typst_tag=$(latest_tag typst/typst)
+  lychee_tag=$(latest_tag lycheeverse/lychee)
+  htmltest_tag=$(latest_tag wjdp/htmltest)
   cat > versions.env <<EOF
-HUGO_VERSION=$(latest_tag gohugoio/hugo)
-TYPST_VERSION=$(latest_tag typst/typst)
-LYCHEE_VERSION=$(latest_tag lycheeverse/lychee)
-HTMLTEST_VERSION=$(latest_tag wjdp/htmltest)
+HUGO_VERSION=$hugo_tag
+TYPST_VERSION=$typst_tag
+LYCHEE_VERSION=$lychee_tag
+HTMLTEST_VERSION=$htmltest_tag
 EOF
   echo "wrote versions.env:" && cat versions.env
 fi
@@ -25,7 +29,9 @@ source versions.env
 
 install_release() { # repo tag asset_regex binary_name
   local repo=$1 tag=$2 regex=$3 name=$4
-  if [[ -x "$BIN/$name" ]] && "$BIN/$name" --version 2>/dev/null | grep -qF "${tag#v}"; then
+  local version_str="${tag/#v/}"      # v0.162.1 -> 0.162.1
+  version_str="${version_str##*-v}"   # lychee-v0.24.2 -> 0.24.2
+  if [[ -x "$BIN/$name" ]] && { "$BIN/$name" --version 2>/dev/null || "$BIN/$name" version 2>/dev/null; } | grep -qF "$version_str"; then
     echo "$name $tag already installed"
     return
   fi
@@ -35,14 +41,17 @@ install_release() { # repo tag asset_regex binary_name
   [[ -n "$url" ]] || { echo "ERROR: no asset for $repo $tag matching $regex" >&2; exit 1; }
   local tmp
   tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' RETURN
   curl -fsSL "$url" -o "$tmp/pkg"
   case "$url" in
     *.tar.gz|*.tgz) tar -xzf "$tmp/pkg" -C "$tmp" ;;
     *.tar.xz)       tar -xJf "$tmp/pkg" -C "$tmp" ;;
     *)              mv "$tmp/pkg" "$tmp/$name" ;;
   esac
-  find "$tmp" -type f -name "$name" | head -1 | xargs -I{} install -m 0755 {} "$BIN/$name"
-  rm -rf "$tmp"
+  local bin_path
+  bin_path=$(find "$tmp" -type f -name "$name" | head -1)
+  [[ -n "$bin_path" ]] || { echo "ERROR: binary '$name' not found in extracted archive from $url" >&2; exit 1; }
+  install -m 0755 "$bin_path" "$BIN/$name"
   echo "installed $name $tag -> $BIN/$name"
 }
 
