@@ -20,7 +20,7 @@ Personal website for Conor Futro at `futro.dev`: contact info and social links, 
 | CI | GitHub Actions | Repo on GitHub; hosted runners; no CI→server credentials needed (IaC pulls the image). |
 | Analytics | Caddy JSON access logs → Vector → VictoriaMetrics → Perses | Reuses existing observability stack; zero client-side JavaScript. |
 | Blog | Markdown posts + listing + RSS from day one; no tags/categories | Aspirationally regular blogger; pipeline is cheap, taxonomy machinery is not yet needed. |
-| Resume | HTML page + PDF from one source (`data/resume.yaml`) | One source of truth, both formats regenerate together. |
+| Resume | HTML page + PDF from one source (`data/resume.yaml`); PDF rendered by Typst | One source of truth, both formats regenerate together; Typst is a pinned single binary. |
 | Extras | Dark-mode toggle. No contact form, no third-party analytics, no trackers. | Contact is mailto + social links. |
 
 ## Site structure & content model
@@ -37,7 +37,7 @@ futro-dev/
 │   └── resume.yaml        # single source of truth for resume content
 ├── layouts/               # custom theme (templates, partials)
 ├── assets/                # SCSS, dark-mode JS
-├── static/                # favicon, images; resume PDF lands here at build time
+├── static/                # favicon, images
 └── docs/superpowers/      # specs and plans
 ```
 
@@ -64,7 +64,7 @@ futro-dev/
 
 1. Checkout; install pinned Hugo binary (version pinned in the workflow).
 2. `hugo --minify` with strict ref checking (broken internal links/refs fail the build).
-3. Generate resume PDF from `data/resume.yaml` (Typst or weasyprint — picked during implementation) into the output.
+3. Generate resume PDF from `data/resume.yaml` with Typst (pinned single binary, same ethos as Hugo) into `public/resume/` after the Hugo build. Local `hugo server` won't have the PDF; the resume page links to its CI-built path.
 4. Verify: `lychee` link check + HTML validation against the built output.
 5. Build `FROM scratch` image: `COPY public/ /site`. Push to GHCR, tagged `latest` and the commit SHA.
 
