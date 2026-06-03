@@ -47,7 +47,7 @@ futro-dev/
 - **Home** — short intro, contact (mailto) + social links, recent posts, featured projects. Contact also repeated in the site footer; no separate contact page.
 - **Projects** — listing plus one page per spotlight (start with ~2).
 - **Posts** — listing plus one page per post. **Canonical RSS feed is the posts section feed at `/posts/index.xml`**; `<head>` autodiscovery on all pages points there; the site-level `/index.xml` is disabled.
-- **Resume** — HTML page rendered from `data/resume.yaml` by a Hugo template; links to the PDF at the literal path **`/resume/resume.pdf`** (generated from the same YAML; see Build step 3).
+- **Resume** — HTML page at `/resume/` rendered from `data/resume.yaml` by a Hugo template; links to the PDF at the literal path **`/resume.pdf`** (site root — generated from the same YAML; see Build step 3).
 - **404** — custom page. The theme must include a `404.html` layout — Caddy's `handle_errors` (Appendix A) depends on `public/404.html` existing.
 
 ## Theme & frontend
@@ -67,7 +67,7 @@ futro-dev/
 
 1. Checkout; install pinned Hugo binary (version pinned in the workflow).
 2. Build: `hugo --minify --panicOnWarning`, with `refLinksErrorLevel = "ERROR"` in `hugo.toml` so broken internal links/refs fail the build (`--minify` alone does not).
-3. Generate resume PDF with Typst (pinned single binary, same ethos as Hugo): the Typst template loads `data/resume.yaml` directly via Typst's built-in `yaml()` function — no intermediate transform — and writes `public/resume/resume.pdf` after the Hugo build. Local `hugo server` won't have the PDF; the resume page links to the literal `/resume/resume.pdf`. *(De-risk: the implementation plan's first task is a small spike confirming Typst's `yaml()` handles the resume schema.)*
+3. Generate resume PDF with Typst (pinned single binary, same ethos as Hugo): the Typst template loads `data/resume.yaml` directly via Typst's built-in `yaml()` function — no intermediate transform — and writes `public/resume.pdf` after the Hugo build. Local `hugo server` won't have the PDF; the resume page links to the literal `/resume.pdf`. *(De-risk: the implementation plan's first task is a small spike confirming Typst's `yaml()` handles the resume schema.)*
 4. Verify, strictly after step 3 so the PDF link is covered: `lychee` link check + `htmltest` HTML validation (single pinned Go binary — no npm/JVM validators) against the built `public/`, plus the page-weight gate (see Performance bars).
 5. Build `FROM scratch` image: `COPY public/ /site`. Push to GHCR, tagged `latest` and the commit SHA.
 
