@@ -1,0 +1,122 @@
+name: Conor Futro
+title: DevOps · Cloud · Platform Engineer
+location: Broomfield, CO
+email: futro.conor@gmail.com
+website: https://futro.dev
+links:
+  - name: GitHub
+    url: https://github.com/Sohex
+  - name: LinkedIn
+    url: https://www.linkedin.com/in/cfutro
+summary: >-
+  Principal-level engineer and cloud architect with nearly a decade of
+  professional experience designing and building resilient, secure, and
+  performant infrastructure for mission-critical systems. Proven expertise
+  in cloud-native technologies, automating the full SDLC, and championing
+  a culture of engineering excellence.
+expertise:
+  - Cloud-Native Architecture
+  - Infrastructure as Code (IaC)
+  - CI/CD & GitOps
+  - System & Network Design
+  - DevSecOps & Compliance
+  - High-Availability & DR
+  - Observability & Monitoring
+  - Kubernetes Ecosystem
+  - AWS, GCP & Hybrid Cloud
+  - Terraform & Pulumi
+  - Vault & IAM Security
+  - Go, Python & Bash
+experience:
+  - role: Planned Career Sabbatical for Family Caregiving
+    start: October 2020
+    end: Present
+    bullets:
+      - >-
+        Made the decision to step away from full-time work to serve as the
+        primary caregiver for my mother during her battle with, and subsequent
+        passing from, cancer. Following this period, I have continued to care
+        for my grandmother with Alzheimer's while preparing for a return to
+        the industry.
+      - >-
+        Maintained deep engagement with technology through rigorous
+        self-study, building advanced homelab environments, and developing
+        personal projects to challenge myself and advance my skills.
+  - role: Senior Cloud Engineer
+    company: BillGO Inc.
+    location: Fort Collins, CO
+    start: July 2020
+    end: September 2020
+    bullets:
+      - >-
+        Recruited to lead the company's cloud-native strategy; developed a
+        comprehensive proposal and proof-of-concept for migrating monolithic
+        services to a containerized EKS platform.
+      - >-
+        Authored the technical roadmap for adopting Kubernetes, including
+        detailed plans for containerization, IaC implementation with
+        Terraform, and CI/CD pipeline design.
+  - role: Senior Engineer, DevOps & Site Reliability
+    start: March 2018
+    end: December 2019
+    note: >-
+      Delivered expert-level engineering services across both full-time and
+      contract engagements, focusing on Kubernetes adoption, immutable
+      infrastructure, and SRE principles.
+    engagements:
+      - company: Charter Communications
+        role: DevOps Engineer (Contract)
+        location: Denver, CO
+        when: Aug 2019 – Dec 2019 & Mar 2018 – Jun 2018
+        bullets:
+          - >-
+            Recruited for multiple engagements to lead critical infrastructure
+            projects, including designing a fully immutable, high-availability
+            platform on AWS for stateful services like MongoDB and Vault.
+          - >-
+            Developed and scaled Kubernetes CD solutions using Jenkins and
+            Helm, enabling developer teams to deploy services independently
+            and reliably.
+          - >-
+            Mentored junior engineers in cloud-native best practices,
+            accelerating their professional development and improving
+            team-wide consistency.
+      - company: PromonTech LLC
+        role: Site Reliability & DevOps Engineer (Full-Time Employee)
+        location: Denver, CO
+        when: Sep 2018 – Jul 2019
+        bullets:
+          - >-
+            Promoted from SRE to DevOps Engineer in recognition of key
+            contributions to the company's platform strategy and technical
+            leadership.
+          - >-
+            Championed the adoption of cloud-native technologies, prototyping
+            a Kubernetes-based platform to demonstrate significant
+            improvements in deployment speed and resilience.
+          - >-
+            Eliminated risk of error by automating the previously manual
+            process used for schema migrations of the central CQRS eventstore
+            and the regeneration of projected tables.
+          - >-
+            Reduced build and test wait times by up to 90% by architecting and
+            implementing an autoscaling Jenkins deployment sensitive to both
+            queue depth and instance congestion.
+  - role: Linux System Administrator and Migration Specialist
+    company: InMotion Hosting
+    location: Denver, CO
+    start: November 2016
+    end: March 2018
+    bullets:
+      - >-
+        Engineered a suite of automation tools that slashed average customer
+        migration wait times by 95%, reducing them from three weeks to
+        same-day delivery.
+      - >-
+        Developed tooling to automate the detection and resolution of complex
+        DNS and email hosting issues to streamline support and reduce time to
+        resolution for customer contacts.
+      - >-
+        Engineered proactive monitoring tools to automate the detection of
+        resource contention and system faults in multi-tenant and clustered
+        compute environments enabling resolution prior to SLA impact.
