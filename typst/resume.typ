@@ -1,12 +1,14 @@
 #let r = yaml("/data/resume.yaml")
 
 #set document(title: r.name + " — resume", author: r.name)
-#set page(paper: "us-letter", margin: (x: 1.7cm, y: 1.5cm))
+#set page(paper: "us-letter", margin: (x: 1.5cm, y: 1.3cm))
 #set text(size: 10pt)
-#set list(spacing: 0.55em)
+#set list(spacing: 0.5em)
+
+#show link: underline
 
 #let section(title) = {
-  v(0.6em)
+  v(0.4em)
   text(size: 11pt, weight: "bold", tracking: 0.04em, upper(title))
   v(-0.5em)
   line(length: 100%, stroke: 0.5pt)
@@ -34,17 +36,19 @@
 
 #section("Experience")
 #for job in r.experience [
-  #grid(
-    columns: (1fr, auto),
-    column-gutter: 1em,
-    [*#job.role*#if job.at("company", default: "") != "" [ — #job.company]],
-    [#job.start – #job.end],
-  )
+  #block(sticky: true)[
+    #grid(
+      columns: (1fr, auto),
+      column-gutter: 1em,
+      [*#job.role*#if job.at("company", default: "") != "" [ — #job.company]],
+      [#job.start – #job.end],
+    )
+  ]
   #if job.at("location", default: "") != "" [#text(size: 9pt, style: "italic", job.location)]
   #if job.at("note", default: "") != "" [#emph(job.note)]
   #for b in job.at("bullets", default: ()) [- #b]
   #for e in job.at("engagements", default: ()) [
-    #v(0.2em)
+    #v(0.1em)
     #pad(left: 0.8em)[
       #grid(
         columns: (1fr, auto),
@@ -52,8 +56,9 @@
         [*#e.company* — #emph(e.role)],
         [#e.when],
       )
+      #if e.at("location", default: "") != "" [#text(size: 9pt, style: "italic", e.location)]
       #for b in e.bullets [- #b]
     ]
   ]
-  #v(0.45em)
+  #v(0.3em)
 ]

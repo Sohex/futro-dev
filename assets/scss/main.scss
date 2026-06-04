@@ -149,6 +149,12 @@ article > header time { display: block; margin-bottom: 1.5rem; }
   font-size: 0.95rem;
 }
 
+.resume-header {
+  p { margin: 0.2rem 0; }
+  .resume-title { color: var(--fg-muted); }
+  .resume-contact { font-size: 0.9rem; color: var(--fg-muted); }
+}
+
 .job { margin-bottom: 1.75rem; }
 .job .when { margin: 0.1rem 0 0.5rem; }
 .engagement { margin: 1rem 0 1rem 1rem; }

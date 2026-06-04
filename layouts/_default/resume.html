@@ -1,7 +1,15 @@
 {{ define "main" }}
 {{ $r := hugo.Data.resume }}
-<h1>Resume</h1>
-<p><a href="/resume.pdf">Download as PDF</a></p>
+<header class="resume-header">
+  <h1>{{ $r.name }}</h1>
+  <p class="resume-title">{{ $r.title }}</p>
+  <p class="resume-contact">
+    <a href="mailto:{{ $r.email }}">{{ $r.email }}</a>
+    {{- range $r.links }} · <a href="{{ .url }}">{{ .name }}</a>{{ end }}
+    · {{ $r.location }}
+    · <a href="/resume.pdf">Download as PDF</a>
+  </p>
+</header>
 
 <p>{{ $r.summary }}</p>
 
