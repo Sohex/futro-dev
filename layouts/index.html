@@ -6,7 +6,7 @@
 
 {{ with first 5 (where site.RegularPages "Section" "posts") }}
 <section>
-  <h2>Recent posts</h2>
+  <h2 class="section-label">Recent posts</h2>
   <ul class="item-list">
     {{ range . }}
     <li>
@@ -20,7 +20,7 @@
 
 {{ with where site.RegularPages "Section" "projects" }}
 <section>
-  <h2>Projects</h2>
+  <h2 class="section-label">Projects</h2>
   <ul class="item-list">
     {{ range . }}
     <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>

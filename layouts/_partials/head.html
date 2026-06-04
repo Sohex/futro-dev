@@ -4,6 +4,7 @@
   <title>{{ if not .IsHome }}{{ .Title }} · {{ end }}{{ site.Title }}</title>
   <meta name="description" content="{{ .Description | default site.Params.description }}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
   <script>
     (function () {
       var t = localStorage.getItem("theme");
