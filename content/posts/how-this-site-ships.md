@@ -7,8 +7,8 @@ description: "A colophon: Hugo, Typst, a FROM scratch image, and a read-only mou
 This site is intentionally boring, which took a little work.
 
 The pages are built by [Hugo](https://gohugo.io/) with a hand-written theme —
-no CSS framework, no web fonts, and no JavaScript except the dark-mode toggle
-in the header. The [resume](/resume/) page and the [PDF copy](/resume.pdf) are
+no CSS framework, one self-hosted font, and no JavaScript except the dark-mode
+toggle in the header. The [resume](/resume/) page and the [PDF copy](/resume.pdf) are
 rendered from the same YAML file, the PDF by [Typst](https://typst.app/), so
 they can't drift apart.
 

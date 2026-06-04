@@ -13,12 +13,12 @@
 
 <p>{{ $r.summary }}</p>
 
-<h2>Areas of expertise</h2>
+<h2 class="section-label">Areas of expertise</h2>
 <ul class="expertise">
   {{ range $r.expertise }}<li>{{ . }}</li>{{ end }}
 </ul>
 
-<h2>Experience</h2>
+<h2 class="section-label">Experience</h2>
 {{ range $r.experience }}
 <article class="job">
   <h3>{{ .role }}{{ with .company }} — {{ . }}{{ end }}</h3>
