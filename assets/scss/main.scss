@@ -98,6 +98,7 @@ time, .when { color: var(--fg-muted); font-size: 0.9rem; }
   font-weight: 600;
   color: var(--fg);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 [data-theme-toggle] {
