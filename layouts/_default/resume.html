@@ -1,0 +1,29 @@
+{{ define "main" }}
+{{ $r := hugo.Data.resume }}
+<h1>Resume</h1>
+<p><a href="/resume.pdf">Download as PDF</a></p>
+
+<p>{{ $r.summary }}</p>
+
+<h2>Areas of expertise</h2>
+<ul class="expertise">
+  {{ range $r.expertise }}<li>{{ . }}</li>{{ end }}
+</ul>
+
+<h2>Experience</h2>
+{{ range $r.experience }}
+<article class="job">
+  <h3>{{ .role }}{{ with .company }} — {{ . }}{{ end }}</h3>
+  <p class="when">{{ .start }} – {{ .end }}{{ with .location }} · {{ . }}{{ end }}</p>
+  {{ with .note }}<p><em>{{ . }}</em></p>{{ end }}
+  {{ with .bullets }}<ul>{{ range . }}<li>{{ . }}</li>{{ end }}</ul>{{ end }}
+  {{ range .engagements }}
+  <article class="engagement">
+    <h4>{{ .company }} — <em>{{ .role }}</em></h4>
+    <p class="when">{{ .when }}{{ with .location }} · {{ . }}{{ end }}</p>
+    <ul>{{ range .bullets }}<li>{{ . }}</li>{{ end }}</ul>
+  </article>
+  {{ end }}
+</article>
+{{ end }}
+{{ end }}
