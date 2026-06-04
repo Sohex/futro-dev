@@ -1,0 +1,9 @@
+exclude = [
+  "linkedin\\.com",
+  # TEMPORARY — remove when Sohex/futro-dev exists on GitHub (Task 13 does this)
+  "github\\.com/Sohex/futro-dev",
+  # Self-referential URLs in sitemap.xml and RSS feeds cannot be checked without live deployment
+  "futro\\.dev",
+]
+include_mail = false
+max_retries = 3

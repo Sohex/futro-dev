@@ -1,0 +1,4 @@
+DirectoryPath: public
+CheckExternal: false   # lychee owns external links
+IgnoreAltMissing: false
+OutputDir: tmp/.htmltest
