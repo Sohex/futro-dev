@@ -2,17 +2,18 @@
 
 #set document(title: r.name + " — resume", author: r.name)
 #set page(paper: "us-letter", margin: (x: 1.5cm, y: 1.3cm))
-#set text(size: 10pt)
-#set list(spacing: 0.5em)
+#set text(size: 9.5pt)
+#set par(leading: 0.55em, spacing: 0.55em)
+#set list(spacing: 0.35em)
 
 #show link: underline
 
 #let section(title) = {
-  v(0.4em)
+  v(0.3em)
   text(size: 11pt, weight: "bold", tracking: 0.04em, upper(title))
   v(-0.5em)
   line(length: 100%, stroke: 0.5pt)
-  v(0.1em)
+  v(0.05em)
 }
 
 #align(center)[
@@ -30,9 +31,12 @@
 #r.summary
 
 #section("Areas of Expertise")
-#columns(3, gutter: 1em)[
-  #for item in r.expertise [- #item]
-]
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  column-gutter: 1em,
+  row-gutter: 0.3em,
+  ..r.expertise.map(item => [• #item]),
+)
 
 #section("Experience")
 #for job in r.experience [
@@ -48,7 +52,7 @@
   #if job.at("note", default: "") != "" [#emph(job.note)]
   #for b in job.at("bullets", default: ()) [- #b]
   #for e in job.at("engagements", default: ()) [
-    #v(0.1em)
+    #v(0.05em)
     #pad(left: 0.8em)[
       #grid(
         columns: (1fr, auto),
@@ -60,5 +64,5 @@
       #for b in e.bullets [- #b]
     ]
   ]
-  #v(0.3em)
+  #v(0.15em)
 ]
