@@ -22,7 +22,7 @@ jobs:
       - name: Verify
         run: ./scripts/check.sh
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v3
         with:
           name: site
           path: public/
@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v3
         with:
           name: site
           path: public
