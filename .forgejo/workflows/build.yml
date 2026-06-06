@@ -1,0 +1,52 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install pinned toolchain
+        run: |
+          ./scripts/install-tools.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build site
+        run: ./scripts/build.sh
+
+      - name: Verify
+        run: ./scripts/check.sh
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: site
+          path: public/
+          include-hidden-files: true
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: site
+          path: public
+
+      # Zot is tailnet-gated, no auth — no registry login. The act image's docker
+      # build is buildx with the container driver: results stay in build cache
+      # unless pushed from the build itself, so --push (a separate `docker push`
+      # finds no image).
+      - name: Build and push artifact image
+        run: |
+          docker build --push -f Containerfile \
+            -t registry.int.futro.dev/futro-dev:latest \
+            -t registry.int.futro.dev/futro-dev:${{ github.sha }} \
+            .
