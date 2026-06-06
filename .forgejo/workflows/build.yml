@@ -50,3 +50,8 @@ jobs:
             -t registry.int.futro.dev/futro-dev:latest \
             -t registry.int.futro.dev/futro-dev:${{ github.sha }} \
             .
+
+      - name: Trigger site deploy
+        run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
+            -d "deploy ${{ github.sha }}" https://ntfy.int.futro.dev/site-deploy
