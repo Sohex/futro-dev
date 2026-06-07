@@ -1,19 +1,11 @@
 $column: 42rem;
 
 @font-face {
-  font-family: "Newsreader";
+  font-family: "Iosevka Etoile";
   font-style: normal;
-  font-weight: 200 800;
+  font-weight: 400;
   font-display: swap;
-  src: url("/fonts/newsreader-latin.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Newsreader";
-  font-style: italic;
-  font-weight: 200 800;
-  font-display: swap;
-  src: url("/fonts/newsreader-italic-latin.woff2") format("woff2");
+  src: url("/fonts/iosevka-etoile-latin.woff2") format("woff2");
 }
 
 @mixin dark {
@@ -47,8 +39,7 @@ body {
   margin: 0 auto;
   padding: 2.25rem 1.5rem 4rem;
   max-width: $column;
-  font-family: "Newsreader", Charter, Georgia, serif;
-  font-optical-sizing: auto;
+  font-family: "Iosevka Etoile", ui-monospace, "Cascadia Mono", monospace;
   font-size: 1.125rem;
   line-height: 1.7;
   background: var(--bg);
@@ -123,7 +114,7 @@ hr {
 }
 
 code {
-  font-family: ui-monospace, "Cascadia Mono", "Source Code Pro", monospace;
+  font-family: "Iosevka Etoile", ui-monospace, "Cascadia Mono", monospace;
   font-size: 0.82em;
   background: var(--bg-alt);
   padding: 0.15em 0.35em;
