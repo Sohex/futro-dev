@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+{{- $_ := .WordCount -}}{{/* render content now so code-block hooks set hasCode before <head> */}}
 {{ partial "head.html" . }}
 <body>
   {{ partial "header.html" . }}

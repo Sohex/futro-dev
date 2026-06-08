@@ -20,6 +20,10 @@
   </script>
   {{ $css := resources.Get "scss/main.scss" | css.Sass (dict "targetPath" "css/main.css") | minify }}
   <style>{{ $css.Content | safeCSS }}</style>
+  {{ if .Store.Get "hasCode" }}
+  {{ $chroma := resources.Get "scss/chroma.scss" | css.Sass | minify }}
+  <style>{{ $chroma.Content | safeCSS }}</style>
+  {{ end }}
   {{ with site.GetPage "/posts" }}{{ with .OutputFormats.Get "rss" -}}
   <link rel="alternate" type="application/rss+xml" title="{{ site.Title }} — posts" href="{{ .Permalink }}">
   {{- end }}{{ end }}
