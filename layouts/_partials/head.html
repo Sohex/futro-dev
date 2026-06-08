@@ -11,8 +11,8 @@
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
     })();
   </script>
-  {{ $css := resources.Get "scss/main.scss" | css.Sass (dict "targetPath" "css/main.css") | minify | fingerprint }}
-  <link rel="stylesheet" href="{{ $css.RelPermalink }}" integrity="{{ $css.Data.Integrity }}">
+  {{ $css := resources.Get "scss/main.scss" | css.Sass (dict "targetPath" "css/main.css") | minify }}
+  <style>{{ $css.Content | safeHTML }}</style>
   {{ with site.GetPage "/posts" }}{{ with .OutputFormats.Get "rss" -}}
   <link rel="alternate" type="application/rss+xml" title="{{ site.Title }} — posts" href="{{ .Permalink }}">
   {{- end }}{{ end }}
