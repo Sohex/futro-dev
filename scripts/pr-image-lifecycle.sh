@@ -2,9 +2,9 @@
 # Helpers for PR preview image tags and merged-PR registry cleanup.
 set -euo pipefail
 
+SCRIPT_PATH="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
 REGISTRY_URL="${REGISTRY_URL:-https://registry.int.futro.dev}"
 IMAGE_REPO="${IMAGE_REPO:-futro-dev}"
-SCRIPT_PATH="${BASH_SOURCE[0]}"
 
 usage() {
   cat >&2 <<'EOF'
@@ -37,7 +37,6 @@ validate_sha() {
 
 cmd_pr_tags() {
   [[ $# -eq 2 ]] || { usage; exit 2; }
-
   local pr_number=$1
   local head_sha=$2
 
@@ -50,34 +49,26 @@ cmd_pr_tags() {
 }
 
 cmd_extract_pr_number() {
+  local message
   if [[ $# -gt 0 ]]; then
-    local message="$*"
-    printf '%s' "$message" | python3 -c '
-import re
-import sys
-
-message = sys.stdin.read()
-match = re.search(r"\(#([1-9][0-9]*)\)", message)
-if match:
-    print(match.group(1))
-'
-    return 0
+    message=$*
+  else
+    message=$(cat)
   fi
 
-  python3 -c '
+  python3 - "$message" <<'PY'
 import re
 import sys
 
-message = sys.stdin.read()
+message = sys.argv[1]
 match = re.search(r"\(#([1-9][0-9]*)\)", message)
 if match:
     print(match.group(1))
-'
+PY
 }
 
 cmd_filter_tags() {
   [[ $# -eq 1 ]] || { usage; exit 2; }
-
   local pr_number=$1
   validate_pr_number "$pr_number"
 
@@ -86,10 +77,9 @@ import json
 import sys
 
 pr_number = sys.argv[1]
-exact = f"pr-{pr_number}"
-prefix = f"pr-{pr_number}-"
-
 payload = json.load(sys.stdin)
+prefix = f"pr-{pr_number}-"
+exact = f"pr-{pr_number}"
 for tag in payload.get("tags") or []:
     if tag == exact or tag.startswith(prefix):
         print(tag)
@@ -97,25 +87,33 @@ for tag in payload.get("tags") or []:
 }
 
 merged_pr_from_git() {
-  git log -1 --format=%B 2>/dev/null | "$SCRIPT_PATH" extract-pr-number || true
+  git log -1 --format=%B | "$SCRIPT_PATH" extract-pr-number
 }
 
 delete_tag() {
   local tag=$1
+  local response_file
   local status
 
-  status=$(curl -sS -o /dev/null -w '%{http_code}' \
-    -X DELETE "${REGISTRY_URL}/v2/${IMAGE_REPO}/manifests/${tag}" || true)
+  response_file=$(mktemp)
+  status=$(
+    curl -sS -o "$response_file" -w '%{http_code}' \
+      -X DELETE "${REGISTRY_URL}/v2/${IMAGE_REPO}/manifests/${tag}" || true
+  )
 
   case "$status" in
     2??)
       echo "deleted ${IMAGE_REPO}:${tag}"
+      rm -f "$response_file"
       ;;
     404)
       echo "already absent ${IMAGE_REPO}:${tag}"
+      rm -f "$response_file"
       ;;
     *)
       echo "ERROR: delete failed for ${IMAGE_REPO}:${tag} with HTTP ${status}" >&2
+      cat "$response_file" >&2 || true
+      rm -f "$response_file"
       exit 1
       ;;
   esac
@@ -136,21 +134,58 @@ cmd_cleanup() {
 
   validate_pr_number "$pr_number"
 
-  if ! curl -fsS "${REGISTRY_URL}/v2/${IMAGE_REPO}/tags/list" \
-    | "$SCRIPT_PATH" filter-tags "$pr_number" \
-    | while IFS= read -r tag; do
-      [[ -n "$tag" ]] || continue
-      delete_tag "$tag"
-    done; then
+  local tags_json
+  local http_status
+  local tags_file
+
+  tags_file=$(mktemp)
+  http_status=$(
+    curl -sS -o "$tags_file" -w '%{http_code}' \
+      "${REGISTRY_URL}/v2/${IMAGE_REPO}/tags/list" || true
+  )
+
+  case "$http_status" in
+    2??)
+      ;;
+    404)
+      echo "No PR image tags found for PR #${pr_number}."
+      rm -f "$tags_file"
+      exit 0
+      ;;
+    *)
+      echo "ERROR: failed to list tags for ${IMAGE_REPO} with HTTP ${http_status}" >&2
+      cat "$tags_file" >&2 || true
+      rm -f "$tags_file"
+      exit 1
+      ;;
+  esac
+
+  tags_json=$(<"$tags_file")
+  rm -f "$tags_file"
+
+  local tags
+  local parse_err_file
+  parse_err_file=$(mktemp)
+  if ! tags=$(printf '%s' "$tags_json" | "$SCRIPT_PATH" filter-tags "$pr_number" 2>"$parse_err_file"); then
+    echo "ERROR: failed to parse tags/list response for ${IMAGE_REPO}" >&2
+    rm -f "$parse_err_file"
     exit 1
   fi
+  rm -f "$parse_err_file"
 
-  echo "Cleanup complete for PR #${pr_number}."
+  if [[ -z "$tags" ]]; then
+    echo "No PR image tags found for PR #${pr_number}."
+    exit 0
+  fi
+
+  while IFS= read -r tag; do
+    [[ -n "$tag" ]] || continue
+    delete_tag "$tag"
+  done <<< "$tags"
 }
 
 main() {
   [[ $# -ge 1 ]] || { usage; exit 2; }
-
   local command=$1
   shift
 
