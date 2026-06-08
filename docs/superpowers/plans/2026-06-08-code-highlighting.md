@@ -342,13 +342,20 @@ Expected: completes with no error; among other output, `csp-inline: policy injec
 
 - [ ] **Step 2: Verify the chroma `<style>` is covered by that page's CSP**
 
-Every page already carries two inline `<style>` blocks that get hashed — `main.scss`
-and the per-page `@font-face` block injected by `font-inline.py` — so the absolute
-count is two on a code-free page. The code page must have exactly **one more**
-(the chroma block). Assert the difference rather than absolute counts:
+After a full build every regular post carries two hashed inline `<style>` blocks —
+`main.scss` and the per-page `@font-face` block injected by `font-inline.py`. The
+code page must have exactly **one more** (the chroma block). Compare the code page to
+a **code-free post** as the baseline — NOT the home page: `layouts/index.html` adds a
+page-specific `.intro` `<style>` to home only, so home is not a generic baseline (it
+also lands at 3 hashes, which would make a home comparison falsely look like "no
+delta"). Use `how-this-site-ships` (a code-free post) instead:
 
-Run: `code=$(grep -o "'sha256-" <(grep -o "style-src [^;]*" public/posts/snippets/index.html) | wc -l); home=$(grep -o "'sha256-" <(grep -o "style-src [^;]*" public/index.html) | wc -l); echo "code=$code home=$home"`
-Expected: `code=3 home=2` — i.e. the code page's `style-src` has exactly one more hash than the home page's. The extra hash is the conditional chroma palette, hashed automatically with no change to `csp-inline.py`.
+Run: `code=$(grep -o "'sha256-" <(grep -o "style-src [^;]*" public/posts/snippets/index.html) | wc -l); base=$(grep -o "'sha256-" <(grep -o "style-src [^;]*" public/posts/how-this-site-ships/index.html) | wc -l); echo "code=$code base=$base"`
+Expected: `code=3 base=2` — the code page's `style-src` has exactly one more hash than a code-free post's. The extra hash is the conditional chroma palette, hashed automatically with no change to `csp-inline.py`.
+
+Also confirm home gets no chroma block (its hash count is incidental, but it must not gain the palette):
+Run: `grep -c chroma public/index.html`
+Expected: `0`.
 
 - [ ] **Step 3: Confirm the CSP guard found no violations**
 
