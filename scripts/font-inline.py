@@ -22,6 +22,10 @@ def subset_woff2(chars, master_cmap):
     opts = Options()
     opts.layout_features = []        # match the old --layout-features='' (ship no features)
     opts.layout_closure = False      # match the old --no-layout-closure
+    opts.drop_tables += ["GSUB", "GPOS", "GDEF"]  # no features shipped -> drop the now-dead layout tables
+    opts.name_IDs = []               # browsers match @font-face on the CSS family, not the font's name table
+    opts.name_legacy = False
+    opts.name_languages = []
     sub = Subsetter(options=opts)
     sub.populate(text="".join(sorted(chars)))
     sub.subset(font)
