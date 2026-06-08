@@ -297,16 +297,26 @@ hugo --minify --panicOnWarning
 # to enable some, set e.g. --layout-features=calt,clig and DROP --no-layout-closure (so the
 # feature's glyphs ship). Coding ligatures should also be scoped to code/pre via CSS so prose isn't ligated.
 FONT_PYTHON="${FONT_PYTHON:-python3}"
-charset="$(mktemp)"
-trap 'rm -f "$charset"' EXIT
-"$FONT_PYTHON" scripts/font-codepoints.py public > "$charset"
-grep -q '◐' "$charset" || { echo "ERROR: codepoint floor lost the ◐ toggle glyph" >&2; exit 1; }
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+"$FONT_PYTHON" scripts/font-codepoints.py public > "$work/charset"
+grep -q '◐' "$work/charset" || { echo "ERROR: codepoint floor lost the ◐ toggle glyph" >&2; exit 1; }
 mkdir -p public/fonts
 "$FONT_PYTHON" -m fontTools.subset tools/font/masters/iosevka-custom-regular.ttf \
-  --text-file="$charset" \
+  --text-file="$work/charset" \
   --layout-features='' --no-layout-closure \
   --flavor=woff2 \
-  --output-file=public/fonts/iosevka-custom.woff2
+  --output-file="$work/font.woff2"
+
+# Content-hash the filename. Caddy serves /fonts/* with `immutable`, and this file is NOT
+# Hugo-fingerprinted, so its name MUST change iff the bytes change — otherwise clients keep a
+# stale cached font forever. main.scss's @font-face src and the head.html preload carry the
+# stable token `/fonts/iosevka-custom.woff2`, rewritten here to the hashed name across the
+# inlined HTML (CSS/JS are inlined into every page, so the token appears per-page).
+hash="$(sha256sum "$work/font.woff2" | cut -c1-8)"
+asset="iosevka-custom.${hash}.woff2"
+mv "$work/font.woff2" "public/fonts/${asset}"
+find public -name '*.html' -print0 | xargs -0 sed -i "s|/fonts/iosevka-custom\.woff2|/fonts/${asset}|g"
 
 typst compile --root . typst/resume.typ public/resume.pdf
 ```
@@ -317,10 +327,12 @@ Run:
 ```bash
 chmod +x scripts/font-codepoints.py
 ./scripts/build.sh
-ls -l public/fonts/iosevka-custom.woff2
-head -c4 public/fonts/iosevka-custom.woff2 | xxd | head -1   # MUST be 'wOF2' (real woff2)
+woff2=$(ls public/fonts/iosevka-custom.*.woff2); ls -l "$woff2"
+head -c4 "$woff2" | xxd | head -1   # MUST be 'wOF2' (real woff2)
+grep -rq '/fonts/iosevka-custom\.woff2"' public && echo "TOKEN NOT REWRITTEN" || echo "token rewritten"
+grep -rqE 'iosevka-custom\.[0-9a-f]{8}\.woff2' public/index.html && echo "hashed ref present"
 ```
-Expected: file ~5-8 KB; magic line shows `774f 4632  wOF2`.
+Expected: one content-hashed file ~5-8 KB (e.g. `iosevka-custom.1a2b3c4d.woff2`); magic line `774f 4632  wOF2`; `token rewritten`; `hashed ref present`.
 
 - [ ] **Step 4: Commit**
 
@@ -337,6 +349,8 @@ git commit -m "feat(font): build-time exact subset into public/fonts (pyftsubset
 - Modify: `assets/scss/main.scss` (lines 4, 8, 42, 117)
 - Modify: `layouts/_partials/head.html` (line 7)
 - Delete: `static/fonts/iosevka-etoile-latin.woff2`
+
+The `src`/`href` below use the **stable token** `/fonts/iosevka-custom.woff2`. That exact path is never served — `build.sh` (Task 4) rewrites it to the content-hashed name (`iosevka-custom.<hash>.woff2`) in the built HTML. Author the token; the build does the rest.
 
 - [ ] **Step 1: Rename the CSS family to "Iosevka Custom" (3 occurrences) in `assets/scss/main.scss`**
 
@@ -377,9 +391,9 @@ Run: `git rm static/fonts/iosevka-etoile-latin.woff2`
 Run:
 ```bash
 ./scripts/build.sh
-grep -rq "/fonts/iosevka-custom\.woff2" public/index.html && echo "preload OK"
+grep -rqE "/fonts/iosevka-custom\.[0-9a-f]{8}\.woff2" public/index.html && echo "preload OK"
 grep -rq "iosevka-etoile" public && echo "STALE REF FOUND" || echo "no stale refs"
-test -f public/fonts/iosevka-custom.woff2 && echo "asset present"
+ls public/fonts/iosevka-custom.*.woff2 >/dev/null && echo "asset present"
 ```
 Expected: `preload OK`, `no stale refs`, `asset present`.
 
@@ -407,9 +421,11 @@ Run:
 ```bash
 "$FONT_PYTHON" scripts/font-codepoints.py public > /tmp/want.txt
 "$FONT_PYTHON" - <<'PY'
+import glob
 from fontTools.ttLib import TTFont
 want = {ord(c) for c in open('/tmp/want.txt', encoding='utf-8').read()}
-cov = set().union(*[t.cmap.keys() for t in TTFont('public/fonts/iosevka-custom.woff2')['cmap'].tables])
+woff2 = glob.glob('public/fonts/iosevka-custom.*.woff2')[0]
+cov = set().union(*[t.cmap.keys() for t in TTFont(woff2)['cmap'].tables])
 missing = sorted(want - cov)
 print("missing:", ["U+%04X" % c for c in missing] or "none")
 assert not missing, "subset missing glyphs the site renders"
@@ -420,8 +436,8 @@ Expected: `missing: none` then `coverage OK`.
 
 - [ ] **Step 3: Confirm the page-weight headroom**
 
-Run: `ls -l public/fonts/iosevka-custom.woff2`
-Expected: ~5-8 KB (well under the prior ~30 KB; gate has wide margin).
+Run: `ls -l public/fonts/iosevka-custom.*.woff2`
+Expected: one content-hashed file ~5-8 KB (well under the prior ~30 KB; gate has wide margin).
 
 - [ ] **Step 4: Visual render check (no tofu)**
 
@@ -483,7 +499,7 @@ The frontend-design review decides three things; each is a small change on this 
 ## Notes / risks
 
 - **Python in the build path (accepted).** `build.sh` (and CI) now depend on a pinned fonttools venv. This is the agreed tradeoff for real woff2 in one tool — `hb-subset` can't emit woff2, and it removes the static-binary compile + CI vendoring + glibc-portability concerns entirely. Pins live in `tools/font/requirements.txt`.
-- **Non-fingerprinted font URL.** `/fonts/iosevka-custom.woff2` has a stable name (matching today's model), so a content change with an unchanged URL relies on normal cache expiry. Acceptable for a rarely-changing font; out of scope to add hashing.
+- **Content-hashed font URL (Caddy `immutable`).** The serving Caddyfile sets `Cache-Control: immutable` on `/fonts/*`, and this file isn't Hugo-fingerprinted, so `build.sh` content-hashes the name (`iosevka-custom.<sha256[:8]>.woff2`) and rewrites the stable token across the inlined HTML. The name changes iff the bytes change — so `immutable` is safe and byte-identical rebuilds keep caching.
 - **Master coverage bound (T4).** A glyph outside T4 (CJK, rare scripts) falls back to the system font, and Task 6 Step 2 flags it as `missing` — widen the `--unicodes` range in the Containerfile and rerun `build-font.sh`.
 - **Shipper/verifier agree by construction.** Both `build.sh` and the Task 6 coverage check call `scripts/font-codepoints.py`, so the subset is built from, and checked against, the same codepoint set.
 - **Config provenance.** `tools/font/private-build-plans.toml` is the owner's `IosevkaCustom` config verbatim, minus Bold (FE review adds weights). `noCvSs = true` bakes the variant selections as defaults and skips cv##/ss##, so the curated master menu carries only typographic features + coding ligatures.

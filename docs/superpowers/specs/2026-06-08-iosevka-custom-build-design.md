@@ -109,7 +109,9 @@ Inserted after `hugo --minify` (so rendered HTML exists) and before the checks:
 2. For each committed master, run **`pyftsubset --flavor=woff2`** to that codepoint set with the
    **retained layout-feature set chosen by the FE review** (default: drop all — `--layout-features=''
    --no-layout-closure` — since Iosevka's substitution features otherwise drag in fraction/superscript/
-   alternate glyphs). Output to `public/fonts/` under a **stable filename** (~6 KB/weight, real woff2).
+   alternate glyphs). Output to `public/fonts/` under a **content-hashed filename**
+   (`iosevka-custom.<sha256[:8]>.woff2`, ~6 KB/weight, real woff2), then rewrite the stable token in the
+   inlined HTML to that name (see Cache-busting).
 
 Because the subset is regenerated from a broad master against the *actual* content on every build, the
 shipped font always matches the page — no stale-subset tofu for anything the master covers. (Glyphs
@@ -118,11 +120,18 @@ outside the master's bounded coverage fall back to the system font, exactly as t
 ### Site integration (the only authored files that change)
 
 - `assets/scss/main.scss` `@font-face` + font stacks: rename the CSS family to `"Iosevka Custom"` (3
-  spots), point `src` at the stable `/fonts/…` path, set `font-weight` to the shipped value(s) (e.g.
-  `400`, or one `@font-face` per shipped weight). Keep `font-display: swap`. The font is referenced by
-  absolute path, not Hugo's fingerprinted pipeline — consistent with today's `static/fonts/` →
-  `public/fonts/` model.
-- `layouts/_partials/head.html`: preload `href` → the stable filename (`type="font/woff2"`).
+  spots), point `src` at the **stable token** `/fonts/iosevka-custom.woff2`, set `font-weight` to the
+  shipped value(s) (e.g. `400`, or one `@font-face` per shipped weight). Keep `font-display: swap`.
+- `layouts/_partials/head.html`: preload `href` → the same stable token (`type="font/woff2"`).
+
+### Cache-busting (Caddy `immutable`)
+
+The serving Caddyfile sets `Cache-Control: immutable` on `/fonts/*`, and the font is not run through
+Hugo's fingerprinting pipeline (it's generated post-Hugo by `build.sh`). So `build.sh` **content-hashes**
+the filename (`iosevka-custom.<sha256[:8]>.woff2`) and `sed`s the stable token
+(`/fonts/iosevka-custom.woff2`) to that name across all `public/**/*.html` (the token appears per-page
+because CSS/JS are inlined). The name changes iff the bytes change — so `immutable` never serves a stale
+font, and byte-identical rebuilds keep their cache.
 
 ## Subsetter sourcing
 
