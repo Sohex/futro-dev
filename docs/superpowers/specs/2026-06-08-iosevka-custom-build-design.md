@@ -62,7 +62,7 @@ weight, bytes are a non-issue; **leanness, not the gate, governs how many weight
 | Variable vs static | **Static per-weight** (Iosevka has no VF build) |
 | Subsetting | **Build-time exact subset** in `build.sh` against rendered HTML (+ a safety floor), dropping unused substitution features |
 | Subsetter | **`hb-subset`** — vendored static build for CI, `apt` (`libharfbuzz-bin`) locally; **not** managed by `install-tools.sh`/`versions.env` |
-| Master artifact | Committed per-weight TTF master at **T4 coverage + a curated OT-feature menu** (~101 KB gz/weight): latin+European, Greek, Cyrillic, punctuation/currency/letterlike, arrows, math operators, box-drawing, geometric shapes, dingbats; plus useful typographic features (fractions, super/subscripts, ordinals, number styles, slashed zero, ligatures, case, localization, combining marks) — excluding cv##/ss## and coding ligatures. Produced by the container; source, not served |
+| Master artifact | Committed per-weight TTF master at **T4 coverage + a curated OT-feature menu** (~112 KB gz/weight): latin+European, Greek, Cyrillic, punctuation/currency/letterlike, arrows, math operators, box-drawing, geometric shapes, dingbats; plus typographic features (fractions, super/subscripts, ordinals, number styles, slashed zero, ligatures, case, localization, combining marks) **and coding ligatures** (calt/clig/dlig/rlig, for code blocks). cv##/ss## are not built (`noCvSs`). Produced by the container; source, not served |
 | Build host | **Containerized one-shot**; npm isolated in a throwaway image |
 | Iosevka pin | A **git tag**, pinned in the font pipeline (Containerfile / `build-font.sh`), **not** `versions.env` |
 | Weight/italic count | **Deferred** to a frontend-design review; leanness governs (freed bytes ≠ add weights) |
@@ -80,10 +80,12 @@ Two stages with very different cadence.
    (`npm run build -- ttf::<plan>`; hinted — `ttfautohint` is in the image).
 2. Inside the image, `hb-subset` each weight's full TTF (~8 MB) down to the **T4 master** (ranges below),
    retaining a **curated OpenType-feature menu** (fractions, super/subscripts, ordinals, number styles,
-   slashed zero, ligatures, case, localization, combining marks) but dropping cv##/ss## and coding
-   ligatures — ~101 KB gz/weight (vs ~87 KB feature-stripped, vs ~392 KB everything). This lets `build.sh`
-   enable any menu feature later without a master rebuild. Covers realistic prose, European names,
-   Greek/Cyrillic, and the technical symbols code blocks render in Iosevka.
+   slashed zero, ligatures, case, localization, combining marks) **plus coding ligatures**
+   (calt/clig/dlig/rlig, for code blocks) — ~112 KB gz/weight (vs ~87 KB with no features, ~392 KB with
+   everything). cv##/ss## are not built (`noCvSs` in the build plan), so the variant choices are baked as
+   defaults and there's no cv/ss bloat. This lets `build.sh` enable any menu feature later without a master
+   rebuild. Covers realistic prose, European names, Greek/Cyrillic, and the technical symbols code blocks
+   render in Iosevka.
 3. `build-font.sh` extracts the master TTFs to the font-source dir; the owner commits them + the toml +
    the pipeline.
 
