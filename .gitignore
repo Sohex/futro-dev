@@ -1,5 +1,6 @@
 public/
 resources/
 .hugo_build.lock
+.venv/
 tmp/
 __pycache__/
