@@ -2,28 +2,31 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the out-of-band Iosevka Etoile webfont with a reproducible, self-built one: a pinned containerized Iosevka build producing a committed per-weight master, exact-subset against rendered content at site-build time via `hb-subset`.
+**Goal:** Replace the out-of-band Iosevka webfont with a reproducible, self-built one: a pinned containerized Iosevka build producing a committed per-weight master TTF, exact-subset against rendered content at site-build time with `fonttools` (`pyftsubset --flavor=woff2`).
 
-**Architecture:** Two cadences. (1) **Occasional** — a throwaway container clones pinned Iosevka, builds the master TTF from a committed `private-build-plans.toml`, and also compiles a self-contained `hb-subset`; both are committed. npm/Node never leave the container. (2) **Every build** — `build.sh` runs `hb-subset` against the just-rendered `public/**/*.html` to emit a tiny content-matched woff2 into `public/fonts/`.
+**Architecture:** Two cadences. (1) **Occasional** — a throwaway container clones pinned Iosevka, `npm`-builds the unhinted TTF from a committed `private-build-plans.toml`, then `pyftsubset`s it to the committed master (T4 coverage + a curated OpenType-feature menu). npm/Node never leave the container. (2) **Every build** — `build.sh` runs `pyftsubset` against the just-rendered `public/**/*.html` (+ a safety floor) to emit a tiny content-matched woff2 into `public/fonts/`.
 
-**Tech Stack:** Hugo, Typst, Forgejo Actions, podman; Iosevka (Node/npm, containerized) v34.6.1; HarfBuzz `hb-subset` 12.3.2; fonttools (dev verification only).
+**Tech Stack:** Hugo, Typst, Forgejo Actions, podman; Iosevka (Node/npm, containerized) v34.6.1; fonttools 4.63.0 + brotli 1.2.0 (`pyftsubset`, real woff2 output).
 
 **Spec:** `docs/superpowers/specs/2026-06-08-iosevka-custom-build-design.md`
+
+> **Note (why fonttools, not hb-subset):** `hb-subset` writes SFNT only — it does **not** emit woff2 regardless of file extension (verified: its `.woff2` output has TTF magic `0001 0000`). `pyftsubset --flavor=woff2` produces real brotli woff2 (magic `wOF2`, ~5.7 KB) in one step, so the pipeline uses fonttools and needs no static `hb-subset`/`woff2_compress` binary and no CI binary vendoring.
 
 ---
 
 ## Scope
 
-This plan ships the **pipeline** plus a single self-built **Regular (400)** weight — visually identical to today's site (the weight hierarchy is currently flat at 400 anyway), but reproducible and ~10 KB instead of ~30 KB. The deferred frontend-design decisions (weight count, italics, retained layout features) are **out of scope** here; the pipeline supports them by adding weights to the toml / `@font-face` and rebuilding the master. See "Follow-up (post-FE-review)".
+This plan ships the **pipeline** plus a single self-built **Regular (400)** weight — visually identical to today's site (the weight hierarchy is currently flat at 400 anyway), but reproducible and ~6 KB instead of ~30 KB. The deferred frontend-design decisions (weight count, italics, which curated layout features to actually ship) are **out of scope** here; the pipeline supports them by adding weights to the toml / `@font-face` and flipping `pyftsubset` flags. See "Follow-up (post-FE-review)".
 
 ## Prerequisites (one-time, local dev machine)
 
-The site `build.sh` will call `hb-subset`; install it and the dev verification tool:
+`build.sh` will subset with fonttools. Create a pinned venv and point `FONT_PYTHON` at it (the scripts default `FONT_PYTHON` to `python3`, so set it in your shell or `direnv`):
 
 ```bash
-sudo apt-get install -y libharfbuzz-bin   # provides hb-subset (>=12 emits woff2)
-hb-subset --version                        # expect: hb-subset (HarfBuzz) 12.x
-python3 -m venv ~/.cache/futro-font-venv && ~/.cache/futro-font-venv/bin/pip -q install fonttools brotli
+python3 -m venv ~/.cache/futro-font-venv
+~/.cache/futro-font-venv/bin/pip install fonttools==4.63.0 brotli==1.2.0   # matches tools/font/requirements.txt
+export FONT_PYTHON="$HOME/.cache/futro-font-venv/bin/python"               # used by build.sh + verification
+"$FONT_PYTHON" -m fontTools.subset --help >/dev/null && echo "pyftsubset OK"
 ```
 
 `podman` (already present, v5.7) is needed for the container build in Task 3.
@@ -33,16 +36,17 @@ python3 -m venv ~/.cache/futro-font-venv && ~/.cache/futro-font-venv/bin/pip -q 
 | Path | Responsibility | Created/Modified |
 | --- | --- | --- |
 | `tools/font/private-build-plans.toml` | Iosevka build config: owner's `IosevkaCustom` variants + Regular weight | Create (from owner's `private_build_plan.toml`) |
-| `tools/font/Containerfile` | Pinned Iosevka master build + self-contained `hb-subset` compile; exports both | Create |
-| `scripts/build-font.sh` | Drives the container, extracts master TTF + `hb-subset` binary into the repo | Create |
-| `tools/font/masters/iosevka-custom-regular.ttf` | Committed Regular master: T4 coverage + curated OT-feature menu (source, not served) | Generated+committed |
-| `tools/font/bin/hb-subset` | Committed self-contained `hb-subset` for CI | Generated+committed |
-| `scripts/build.sh` | Add build-time exact-subset step after Hugo | Modify |
-| `assets/scss/main.scss` | `@font-face` + font stacks → "Iosevka Custom" / new filename | Modify (lines 3-9, 42, 117) |
+| `tools/font/requirements.txt` | Pinned fonttools+brotli, used by the container and CI | Create |
+| `tools/font/Containerfile` | Pinned Iosevka build → `pyftsubset` master; exports the master TTF | Create |
+| `scripts/build-font.sh` | Drives the container, extracts the master TTF into the repo | Create |
+| `scripts/font-codepoints.py` | Shared: emit codepoints used in built HTML + safety floor (stdlib only) | Create |
+| `tools/font/masters/iosevka-custom-regular.ttf` | Committed Regular master: T4 + curated OT-feature menu (source, not served) | Generated+committed |
+| `scripts/build.sh` | Add build-time `pyftsubset` step after Hugo | Modify |
+| `assets/scss/main.scss` | `@font-face` + font stacks → "Iosevka Custom" / new filename | Modify (lines 4, 8, 42, 117) |
 | `layouts/_partials/head.html` | preload → new filename | Modify (line 7) |
 | `static/fonts/iosevka-etoile-latin.woff2` | Old out-of-band asset | Delete |
 | `private_build_plan.toml` (repo root) | Owner's source config, moved into `tools/font/` | Delete after copy |
-| `.forgejo/workflows/build.yml` | Put vendored `hb-subset` on CI `PATH` | Modify |
+| `.forgejo/workflows/build.yml` | Provision the fonttools venv + `FONT_PYTHON` in the build job | Modify |
 
 ---
 
@@ -51,7 +55,7 @@ python3 -m venv ~/.cache/futro-font-venv && ~/.cache/futro-font-venv/bin/pip -q 
 **Files:**
 - Create: `tools/font/private-build-plans.toml`
 
-This is the owner's `private_build_plan.toml` (at the repo root), moved to `tools/font/private-build-plans.toml` (the filename Iosevka's build expects) and **restricted to the Regular weight** for the initial ship. The owner's `variants.*` selections, `noCvSs = true` (cv##/ss## features not built — so the variants are baked as defaults and there's no cv/ss bloat), and `slopes.Upright` (upright only, no italic) carry over **verbatim**. Bold is dropped here — adding weights is the FE-review follow-up. The CSS `font-family` ("Iosevka Custom") is just a label, independent of the `family` string, but we keep them aligned for clarity.
+This is the owner's `private_build_plan.toml` (at the repo root), moved to `tools/font/private-build-plans.toml` (the filename Iosevka's build expects) and **restricted to the Regular weight** for the initial ship. The owner's `variants.*` selections, `noCvSs = true` (cv##/ss## features not built — variants baked as defaults, no cv/ss bloat), and `slopes.Upright` (upright only, no italic) carry over **verbatim**. Bold is dropped here — adding weights is the FE-review follow-up.
 
 - [ ] **Step 1: Write the config** (owner's content, weights restricted to Regular)
 
@@ -118,148 +122,164 @@ Expected: `ok`
 - [ ] **Step 3: Remove the root copy and commit**
 
 ```bash
-git rm --cached --ignore-unmatch private_build_plan.toml 2>/dev/null; rm -f private_build_plan.toml
+rm -f private_build_plan.toml
 git add tools/font/private-build-plans.toml
 git commit -m "feat(font): Iosevka Custom build plan (Regular)"
 ```
 
 ---
 
-## Task 2: Containerfile (Iosevka master + self-contained hb-subset)
+## Task 2: requirements.txt + Containerfile (Iosevka master via pyftsubset)
 
 **Files:**
+- Create: `tools/font/requirements.txt`
 - Create: `tools/font/Containerfile`
 
-One Debian-based image: compiles a self-contained `hb-subset` (static libharfbuzz, glibc-dynamic — runs on Debian/Ubuntu CI), builds the Iosevka Custom Regular TTF (unhinted), subsets it to the **T4** master (curated OT-feature menu incl. coding ligatures, ~112 KB gz), and exports `bin/hb-subset` + `masters/`. The brotli smoke-test fails the build if the compiled `hb-subset` can't emit woff2 (which `build.sh` needs).
+The container builds the unhinted Iosevka TTF and `pyftsubset`s it to the **T4 master** with a curated OpenType-feature menu (incl. coding ligatures for code blocks), ~112 KB gz. The dist path is **globbed**, not hardcoded, because Iosevka's output filename casing can vary.
 
-- [ ] **Step 1: Write the Containerfile**
+- [ ] **Step 1: Write `tools/font/requirements.txt`**
+
+```
+fonttools==4.63.0
+brotli==1.2.0
+```
+
+- [ ] **Step 2: Write `tools/font/Containerfile`**
 
 ```dockerfile
 # tools/font/Containerfile
-# Builds (occasionally): a self-contained hb-subset + the Iosevka Custom master.
-# Build context is tools/font/ (contains private-build-plans.toml).
+# Builds (occasionally): the Iosevka Custom master TTF. Build context is tools/font/
+# (contains private-build-plans.toml + requirements.txt). npm/Node stay in this image.
 ARG IOSEVKA_VERSION=v34.6.1
-ARG HARFBUZZ_VERSION=12.3.2
 
 FROM node:22-bookworm AS build
 ARG IOSEVKA_VERSION
-ARG HARFBUZZ_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      meson ninja-build pkg-config gcc g++ \
-      libbrotli-dev git ca-certificates \
+      python3 python3-pip git ca-certificates \
  && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --break-system-packages -r /tmp/requirements.txt
 
-# --- self-contained hb-subset (libharfbuzz linked static; needs brotli for woff2) ---
-RUN git clone --depth 1 --branch "$HARFBUZZ_VERSION" https://github.com/harfbuzz/harfbuzz /src/hb \
- && meson setup /src/hb/build /src/hb \
-      -Ddefault_library=static -Dutilities=enabled -Dtests=disabled -Ddocs=disabled \
-      --buildtype=release \
- && ninja -C /src/hb/build \
- && install -Dm755 /src/hb/build/util/hb-subset /out/bin/hb-subset \
- && /out/bin/hb-subset --version
-
-# --- Iosevka Custom Regular TTF ---
 RUN git clone --depth 1 --branch "$IOSEVKA_VERSION" https://github.com/be5invis/Iosevka /src/iosevka
 WORKDIR /src/iosevka
 COPY private-build-plans.toml .
 RUN npm install
-# Unhinted: webfonts don't need TTF hinting (browsers rasterize), and it keeps the master smaller.
+# Unhinted: webfonts don't need TTF hinting (browsers rasterize) and it keeps the master smaller.
 RUN npm run build -- ttf-unhinted::IosevkaCustom
 
-# --- T4 master + curated OpenType-feature menu + brotli/woff2 smoke test ---
-# Keep useful typographic features AND coding ligatures (calt/clig/dlig/rlig) so build.sh
-# can enable any of them later WITHOUT a master rebuild (e.g. ligatures scoped to code
-# blocks). noCvSs in the build plan already prevents cv##/ss## (the ~300 KB blowup), so
-# the menu is ~112 KB gz (vs ~87 KB with no features at all).
-RUN mkdir -p /out/masters \
- && /out/bin/hb-subset dist/IosevkaCustom/TTF-Unhinted/IosevkaCustom-Regular.ttf \
+# T4 master + curated feature menu INCLUDING coding ligatures (calt/clig/dlig/rlig) so
+# build.sh can ship any of them later without a master rebuild. noCvSs already prevents the
+# cv##/ss## blowup. Glob the unhinted Regular TTF (filename casing varies across versions).
+RUN set -eux; \
+    src="$(find dist -path '*TTF-Unhinted*' -name '*-Regular.ttf' | head -1)"; \
+    test -n "$src" || { echo "no unhinted Regular TTF found:"; find dist -name '*.ttf'; exit 1; }; \
+    mkdir -p /out/masters; \
+    python3 -m fontTools.subset "$src" \
       --unicodes="U+0000-024F,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2000-206F,U+20A0-20BF,U+2100-214F,U+2190-21FF,U+2200-22FF,U+2500-257F,U+25A0-25FF,U+2700-27BF,U+2C60-2C7F" \
       --layout-features="case,locl,frac,numr,dnom,sups,subs,sinf,ordn,zero,tnum,pnum,onum,lnum,liga,calt,clig,dlig,rlig,ccmp,mark,mkmk" \
-      --output-file=/out/masters/iosevka-custom-regular.ttf \
- && /out/bin/hb-subset /out/masters/iosevka-custom-regular.ttf \
-      --unicodes=U+0041 --output-file=/tmp/smoke.woff2 \
- && head -c4 /tmp/smoke.woff2 | grep -q 'wOF2' && echo "woff2-ok"
+      --output-file=/out/masters/iosevka-custom-regular.ttf
 
 FROM scratch
 COPY --from=build /out/ /
 ```
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add tools/font/Containerfile
-git commit -m "feat(font): containerized Iosevka master + hb-subset build"
+git add tools/font/requirements.txt tools/font/Containerfile
+git commit -m "feat(font): containerized Iosevka master build (pyftsubset)"
 ```
 
 ---
 
-## Task 3: build-font.sh — run the container, vendor the artifacts
+## Task 3: build-font.sh — run the container, vendor the master
 
 **Files:**
 - Create: `scripts/build-font.sh`
-- Generated+committed: `tools/font/masters/iosevka-custom-regular.ttf`, `tools/font/bin/hb-subset`
+- Generated+committed: `tools/font/masters/iosevka-custom-regular.ttf`
 
 - [ ] **Step 1: Write the driver script**
 
 ```bash
 #!/usr/bin/env bash
-# Occasional: rebuild the committed Iosevka master + vendored hb-subset.
-# Run when private-build-plans.toml or the pinned versions change. Requires podman.
+# Occasional: rebuild the committed Iosevka master. Run when private-build-plans.toml
+# or the pinned Iosevka version changes. Requires podman.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 IOSEVKA_VERSION="${IOSEVKA_VERSION:-v34.6.1}"
-HARFBUZZ_VERSION="${HARFBUZZ_VERSION:-12.3.2}"
 
 rm -rf tools/font/_export
 podman build -f tools/font/Containerfile \
   --build-arg IOSEVKA_VERSION="$IOSEVKA_VERSION" \
-  --build-arg HARFBUZZ_VERSION="$HARFBUZZ_VERSION" \
   -o "type=local,dest=tools/font/_export" \
   tools/font
 
-mkdir -p tools/font/bin tools/font/masters
-install -m 0755 tools/font/_export/bin/hb-subset tools/font/bin/hb-subset
+mkdir -p tools/font/masters
 cp tools/font/_export/masters/*.ttf tools/font/masters/
 rm -rf tools/font/_export
 
-echo "vendored:"
-ls -l tools/font/bin/hb-subset tools/font/masters/*.ttf
+echo "vendored master:"
+ls -l tools/font/masters/*.ttf
 ```
 
-- [ ] **Step 2: Make executable and run it** (slow — npm install + Iosevka build + harfbuzz compile)
+- [ ] **Step 2: Make executable and run it** (slow — `npm install` + Iosevka build, several minutes)
 
 Run: `chmod +x scripts/build-font.sh && ./scripts/build-font.sh`
-Expected: ends with `vendored:` listing `tools/font/bin/hb-subset` and `tools/font/masters/iosevka-custom-regular.ttf`.
+Expected: ends with `vendored master:` listing `tools/font/masters/iosevka-custom-regular.ttf`.
 
-- [ ] **Step 3: Verify the vendored hb-subset runs and the master is sane**
+- [ ] **Step 3: Verify the master is sane** (coverage + features + no cv/ss)
 
 Run:
 ```bash
-tools/font/bin/hb-subset --version
 ls -l tools/font/masters/iosevka-custom-regular.ttf   # expect ~247 KB raw
-~/.cache/futro-font-venv/bin/python -c "from fontTools.ttLib import TTFont; f=TTFont('tools/font/masters/iosevka-custom-regular.ttf'); print('glyphs', f['maxp'].numGlyphs); cps=set().union(*[t.cmap.keys() for t in f['cmap'].tables]); print('has A,euro,box,toggle:', all(c in cps for c in (0x41,0x20AC,0x2500,0x25D0))); feats={fr.FeatureTag for fr in f['GSUB'].table.FeatureList.FeatureRecord} if 'GSUB' in f else set(); print('has frac+calt:', {'frac','calt'} <= feats); print('no cv/ss:', not any(t.startswith(('cv','ss')) for t in feats))"
+"$FONT_PYTHON" -c "from fontTools.ttLib import TTFont; f=TTFont('tools/font/masters/iosevka-custom-regular.ttf'); print('glyphs', f['maxp'].numGlyphs); cps=set().union(*[t.cmap.keys() for t in f['cmap'].tables]); print('has A,euro,box,toggle:', all(c in cps for c in (0x41,0x20AC,0x2500,0x25D0))); feats={fr.FeatureTag for fr in f['GSUB'].table.FeatureList.FeatureRecord} if 'GSUB' in f else set(); print('has frac+calt:', {'frac','calt'} <= feats); print('no cv/ss:', not any(t.startswith(('cv','ss')) for t in feats))"
 ```
-Expected: a `hb-subset (HarfBuzz) 12.x` line; `glyphs` ~2700; `has A,euro,box,toggle: True`; `has frac+calt: True`; `no cv/ss: True`.
+Expected: `glyphs` ~2700; `has A,euro,box,toggle: True`; `has frac+calt: True`; `no cv/ss: True`.
 
-- [ ] **Step 4: Commit the scripts and the vendored artifacts**
+- [ ] **Step 4: Commit the script and the master**
 
 ```bash
-git add scripts/build-font.sh tools/font/bin/hb-subset tools/font/masters/iosevka-custom-regular.ttf
-git commit -m "feat(font): vendor Iosevka master + hb-subset binary"
+git add scripts/build-font.sh tools/font/masters/iosevka-custom-regular.ttf
+git commit -m "feat(font): vendor Iosevka Custom master TTF"
 ```
 
 ---
 
-## Task 4: build-time exact-subset step in build.sh
+## Task 4: shared codepoint script + build-time subset step
 
 **Files:**
+- Create: `scripts/font-codepoints.py`
 - Modify: `scripts/build.sh`
 
-Insert the subset step after Hugo (so `public/**/*.html` exists) and before Typst. The shipped woff2 is built from the actual rendered content plus a safety floor (printable ASCII via `--unicodes`, plus the non-ASCII symbols the design may use).
+`font-codepoints.py` is the single source of truth for "what the webfont must cover" — used by both the shipper (`build.sh`) and the verifier (Task 6), so they can't drift. It strips tags/script/style (so inlined CSS/JS content isn't dragged in) and adds a fixed safety floor.
 
-- [ ] **Step 1: Replace build.sh with the version below**
+- [ ] **Step 1: Write `scripts/font-codepoints.py`**
+
+```python
+#!/usr/bin/env python3
+# Emit (to stdout) the characters the webfont must cover: every char rendered across
+# the built HTML (tags/script/style stripped) + a fixed safety floor. Stdlib only,
+# so it runs under any python3. Used by build.sh (shipper) and the Task 6 verifier.
+import sys, glob, re, html
+
+root = sys.argv[1] if len(sys.argv) > 1 else "public"
+chars = set()
+for path in glob.glob(f"{root}/**/*.html", recursive=True):
+    t = open(path, encoding="utf-8").read()
+    t = re.sub(r"<(script|style)\b.*?</\1>", " ", t, flags=re.S | re.I)  # drop inlined JS/CSS bodies
+    t = re.sub(r"<[^>]+>", " ", t)                                        # drop tags
+    chars.update(html.unescape(t))
+
+chars.update(chr(c) for c in range(0x20, 0x7F))          # printable ASCII floor
+chars.update("·–—‘’“”…©®™→←↑↓◐•§†‡€£")                    # non-ASCII the design may use
+for ws in "\t\n\r":
+    chars.discard(ws)
+sys.stdout.write("".join(sorted(chars)))
+```
+
+- [ ] **Step 2: Replace `scripts/build.sh` with the version below**
 
 ```bash
 #!/usr/bin/env bash
@@ -271,60 +291,42 @@ rm -rf public
 hugo --minify --panicOnWarning
 
 # --- web font: exact-subset the committed master against the rendered content ---
-HB_SUBSET="${HB_SUBSET:-hb-subset}"
+# FONT_PYTHON points at a venv with fonttools+brotli (see Prerequisites / CI). Default ships
+# NO OpenType features (smallest). The master carries a curated menu
+# (case,locl,frac,numr,dnom,sups,subs,sinf,ordn,zero,tnum,pnum,onum,lnum,liga,calt,clig,dlig,rlig,ccmp,mark,mkmk);
+# to enable some, set e.g. --layout-features=calt,clig and DROP --no-layout-closure (so the
+# feature's glyphs ship). Coding ligatures should also be scoped to code/pre via CSS so prose isn't ligated.
+FONT_PYTHON="${FONT_PYTHON:-python3}"
 charset="$(mktemp)"
 trap 'rm -f "$charset"' EXIT
-find public -name '*.html' -exec cat {} + > "$charset"
-# safety floor (non-ASCII the design may use); printable ASCII added via --unicodes below
-printf '%s' $'·–—‘’“”…©®™→←↑↓◐•§†‡€£' >> "$charset"
+"$FONT_PYTHON" scripts/font-codepoints.py public > "$charset"
+grep -q '◐' "$charset" || { echo "ERROR: codepoint floor lost the ◐ toggle glyph" >&2; exit 1; }
 mkdir -p public/fonts
-# Default ships NO OpenType features (smallest). The master carries a curated menu
-# (case,locl,frac,numr,dnom,sups,subs,sinf,ordn,zero,tnum,pnum,onum,lnum,liga,calt,clig,dlig,rlig,ccmp,mark,mkmk);
-# to enable some, set e.g. --layout-features=calt,clig and DROP --no-layout-closure
-# (so the feature's glyphs ship too). No master rebuild needed. Coding ligatures (calt/clig)
-# should also be scoped to code/pre via CSS font-feature-settings so prose isn't ligated.
-"$HB_SUBSET" tools/font/masters/iosevka-custom-regular.ttf \
-  --unicodes=U+0020-007E \
+"$FONT_PYTHON" -m fontTools.subset tools/font/masters/iosevka-custom-regular.ttf \
   --text-file="$charset" \
   --layout-features='' --no-layout-closure \
+  --flavor=woff2 \
   --output-file=public/fonts/iosevka-custom.woff2
 
 typst compile --root . typst/resume.typ public/resume.pdf
 ```
 
-- [ ] **Step 2: Build and verify the woff2 is produced and small**
-
-Run: `./scripts/build.sh && ls -l public/fonts/iosevka-custom.woff2`
-Expected: file exists, ~8-15 KB.
-
-- [ ] **Step 3: Verify it covers every rendered codepoint** (dev check)
+- [ ] **Step 3: Build and verify a real woff2 is produced and small**
 
 Run:
 ```bash
-~/.cache/futro-font-venv/bin/python - <<'PY'
-import glob, re, html
-from fontTools.ttLib import TTFont
-used=set()
-for f in glob.glob("public/**/*.html", recursive=True):
-    t=open(f,encoding="utf-8").read()
-    t=re.sub(r"<(script|style)\b.*?</\1>"," ",t,flags=re.S|re.I); t=re.sub(r"<[^>]+>"," ",t)
-    used.update(html.unescape(t))
-used={ord(c) for c in used if c not in "\t\n\r"}
-font=TTFont("public/fonts/iosevka-custom.woff2")
-cov=set().union(*[t.cmap.keys() for t in font['cmap'].tables])
-missing=sorted(used-cov)
-print("missing codepoints:", ["U+%04X"%c for c in missing] or "none")
-assert not missing, "subset missing glyphs the site renders"
-print("coverage OK")
-PY
+chmod +x scripts/font-codepoints.py
+./scripts/build.sh
+ls -l public/fonts/iosevka-custom.woff2
+head -c4 public/fonts/iosevka-custom.woff2 | xxd | head -1   # MUST be 'wOF2' (real woff2)
 ```
-Expected: `missing codepoints: none` then `coverage OK`.
+Expected: file ~5-8 KB; magic line shows `774f 4632  wOF2`.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build.sh
-git commit -m "feat(font): build-time exact subset into public/fonts"
+git add scripts/font-codepoints.py scripts/build.sh
+git commit -m "feat(font): build-time exact subset into public/fonts (pyftsubset)"
 ```
 
 ---
@@ -390,7 +392,7 @@ git commit -m "feat(font): serve self-built Iosevka subset, drop old asset"
 
 ---
 
-## Task 6: Full verification (gates + render)
+## Task 6: Full verification (gates + coverage + render)
 
 **Files:** none (verification only)
 
@@ -399,12 +401,29 @@ git commit -m "feat(font): serve self-built Iosevka subset, drop old asset"
 Run: `./scripts/build.sh && ./scripts/check.sh`
 Expected: ends with `page-weight OK ...`; htmltest and lychee report no errors (the `/fonts/iosevka-custom.woff2` preload resolves).
 
-- [ ] **Step 2: Confirm the page-weight headroom**
+- [ ] **Step 2: Verify the shipped woff2 covers every rendered codepoint** (uses the same `font-codepoints.py` as the shipper)
+
+Run:
+```bash
+"$FONT_PYTHON" scripts/font-codepoints.py public > /tmp/want.txt
+"$FONT_PYTHON" - <<'PY'
+from fontTools.ttLib import TTFont
+want = {ord(c) for c in open('/tmp/want.txt', encoding='utf-8').read()}
+cov = set().union(*[t.cmap.keys() for t in TTFont('public/fonts/iosevka-custom.woff2')['cmap'].tables])
+missing = sorted(want - cov)
+print("missing:", ["U+%04X" % c for c in missing] or "none")
+assert not missing, "subset missing glyphs the site renders"
+print("coverage OK")
+PY
+```
+Expected: `missing: none` then `coverage OK`.
+
+- [ ] **Step 3: Confirm the page-weight headroom**
 
 Run: `ls -l public/fonts/iosevka-custom.woff2`
-Expected: ~8-15 KB (well under the prior ~30 KB; gate has wide margin).
+Expected: ~5-8 KB (well under the prior ~30 KB; gate has wide margin).
 
-- [ ] **Step 3: Visual render check (no tofu)**
+- [ ] **Step 4: Visual render check (no tofu)**
 
 Run a local server and screenshot with Playwright's bundled browser (no snap; per project constraints):
 ```bash
@@ -417,39 +436,38 @@ Expected: text renders in the self-built font with the owner's variants; `◐` s
 
 ---
 
-## Task 7: CI — vendored hb-subset on PATH
+## Task 7: CI — provision fonttools for the build job
 
 **Files:**
 - Modify: `.forgejo/workflows/build.yml`
 
-CI is `ubuntu-latest` running `install-tools.sh` → `build.sh` → `check.sh`. `build.sh` needs `hb-subset`; provide the committed vendored binary by prepending its dir to `PATH`.
+CI is `ubuntu-latest` running `install-tools.sh` → `build.sh` → `check.sh`. `build.sh` needs `pyftsubset`; provision a pinned fonttools venv and expose it via `FONT_PYTHON`. The **publish** job needs no change — it consumes the already-built `public/` (which includes the woff2), so no fonttools there.
 
-- [ ] **Step 1: Add a PATH step after "Install pinned toolchain" in the `build` job**
+- [ ] **Step 1: Add a venv step before "Build site" in the `build` job**
 
 Insert after the existing `Install pinned toolchain` step (current lines 14-17):
 ```yaml
-      - name: Vendored hb-subset on PATH
-        run: echo "$PWD/tools/font/bin" >> "$GITHUB_PATH"
+      - name: Font subsetter (fonttools)
+        run: |
+          python3 -m venv "$HOME/.font-venv"
+          "$HOME/.font-venv/bin/pip" install -q -r tools/font/requirements.txt
+          echo "FONT_PYTHON=$HOME/.font-venv/bin/python" >> "$GITHUB_ENV"
 ```
 
-- [ ] **Step 2: Verify the vendored binary works standalone** (simulate CI's isolation)
+- [ ] **Step 2: Verify locally that build.sh works with only the venv python** (simulate CI)
 
-Run (uses ONLY the committed binary, not the apt one):
+Run (uses the venv explicitly, not your shell's fonttools):
 ```bash
-rm -rf public && hugo --minify --panicOnWarning
-HB_SUBSET="$PWD/tools/font/bin/hb-subset" bash -c '
-  charset=$(mktemp); find public -name "*.html" -exec cat {} + > "$charset"
-  mkdir -p public/fonts
-  "$HB_SUBSET" tools/font/masters/iosevka-custom-regular.ttf --unicodes=U+0020-007E --text-file="$charset" --layout-features="" --no-layout-closure --output-file=public/fonts/iosevka-custom.woff2
-  head -c4 public/fonts/iosevka-custom.woff2 | grep -q wOF2 && echo "vendored hb-subset OK"'
+FONT_PYTHON="$HOME/.cache/futro-font-venv/bin/python" ./scripts/build.sh
+head -c4 public/fonts/iosevka-custom.woff2 | xxd | head -1   # expect wOF2
 ```
-Expected: `vendored hb-subset OK`.
+Expected: build completes; magic is `wOF2`.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add .forgejo/workflows/build.yml
-git commit -m "ci(font): put vendored hb-subset on PATH"
+git commit -m "ci(font): provision fonttools venv for the build job"
 ```
 
 ---
@@ -458,13 +476,14 @@ git commit -m "ci(font): put vendored hb-subset on PATH"
 
 The frontend-design review decides three things; each is a small change on this pipeline, not a redesign:
 
-1. **Weight count** — add `[buildPlans.IosevkaCustom.weights.<Name>]` entries (e.g. Medium 500), rerun `build-font.sh` (new master per weight), add an `@font-face` per weight in `main.scss`, and a subset step per master in `build.sh`.
-2. **Italics** — the committed config builds **upright only** (`slopes.Upright`). If a real italic is chosen, add a `[buildPlans.IosevkaCustom.slopes.Italic]` block, rerun `build-font.sh` to produce an italic master, and add an italic `@font-face`. Default (drop) needs nothing.
-3. **Layout features** — the master already carries a curated menu (fractions, super/subscripts, ordinals, number styles, slashed zero, standard ligatures, case, localization, combining marks). Enabling any of them is a `build.sh` flag change (`--layout-features=<set>`, and drop `--no-layout-closure` so the glyphs ship) — **no master rebuild**. Only a feature *outside* the menu (cv##/ss## alternates, coding ligatures) needs a master rebuild.
+1. **Weight count** — add `[buildPlans.IosevkaCustom.weights.<Name>]` entries (e.g. Medium 500), rerun `build-font.sh` (new master per weight), add an `@font-face` per weight in `main.scss`, and a `pyftsubset` step per master in `build.sh`.
+2. **Italics** — the committed config builds **upright only** (`slopes.Upright`). If a real italic is chosen, add a `[buildPlans.IosevkaCustom.slopes.Italic]` block, rerun `build-font.sh`, and add an italic `@font-face`. Default (drop) needs nothing.
+3. **Layout features** — the master carries a curated menu (typographic features + coding ligatures). Enabling any is a `build.sh` flag change (`--layout-features=<set>`, and drop `--no-layout-closure` so the glyphs ship) — **no master rebuild**. Coding ligatures should be scoped to `code`/`pre` via CSS `font-feature-settings` so prose isn't ligated. Only a feature *outside* the menu needs a master rebuild.
 
 ## Notes / risks
 
-- **Static hb-subset is the riskiest step.** Task 2's brotli/woff2 smoke test (`woff2-ok`) and Task 7 Step 2 are the gates. If meson can't find brotli, woff2 output fails — `libbrotli-dev` is installed in the Containerfile for exactly this.
+- **Python in the build path (accepted).** `build.sh` (and CI) now depend on a pinned fonttools venv. This is the agreed tradeoff for real woff2 in one tool — `hb-subset` can't emit woff2, and it removes the static-binary compile + CI vendoring + glibc-portability concerns entirely. Pins live in `tools/font/requirements.txt`.
 - **Non-fingerprinted font URL.** `/fonts/iosevka-custom.woff2` has a stable name (matching today's model), so a content change with an unchanged URL relies on normal cache expiry. Acceptable for a rarely-changing font; out of scope to add hashing.
-- **Master coverage bound (T4).** A glyph outside T4 (CJK, rare scripts) falls back to the system font and Task 4 Step 3 will flag it as `missing` — widen the `--unicodes` range in the Containerfile and rerun `build-font.sh`.
-- **Config provenance.** `tools/font/private-build-plans.toml` is the owner's `IosevkaCustom` config verbatim, minus Bold (FE review adds weights). `noCvSs = true` bakes the variant selections as defaults and skips building cv##/ss## features, so the curated master menu carries only typographic features + coding ligatures.
+- **Master coverage bound (T4).** A glyph outside T4 (CJK, rare scripts) falls back to the system font, and Task 6 Step 2 flags it as `missing` — widen the `--unicodes` range in the Containerfile and rerun `build-font.sh`.
+- **Shipper/verifier agree by construction.** Both `build.sh` and the Task 6 coverage check call `scripts/font-codepoints.py`, so the subset is built from, and checked against, the same codepoint set.
+- **Config provenance.** `tools/font/private-build-plans.toml` is the owner's `IosevkaCustom` config verbatim, minus Bold (FE review adds weights). `noCvSs = true` bakes the variant selections as defaults and skips cv##/ss##, so the curated master menu carries only typographic features + coding ligatures.

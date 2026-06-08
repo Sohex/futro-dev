@@ -29,15 +29,16 @@ Before specifying, the key risks were tested on the box with a real 2-weight Eto
   per-weight only (`ttf`/`woff2`/`webfont`). **The variable-woff2 idea is dead — masters are static.**
 - **The site renders 77 unique codepoints**, 5 of them non-ASCII: `·` (U+00B7), `–` (U+2013), `—`
   (U+2014), `’` (U+2019), `◐` (U+25D0, the theme-toggle glyph).
-- **Exact-subset sizes (woff2):** a clean exact subset (no unused substitution features) is **~5 KB/weight
-  with fonttools, ~10 KB/weight with `hb-subset`** (the production tool), vs ~30 KB for today's latin
-  asset. The dominant levers are (a) exact glyph set and (b) **dropping unused *substitution* features**
-  (`calt`/`frac`/`numr`/`dnom`/`locl`) — if kept, they drag ~60 extra fraction/superscript/alternate
-  glyphs into the subset via glyph closure. Etoile has **no kerning** (`GPOS` empty; quasi-proportional
-  spacing is in advance widths), so there's no kern data to preserve.
-- **`hb-subset` (≥12) emits woff2 directly** (built with brotli) — no separate woff2-compress step — and
-  subsets the full 8 MB master to the shipped woff2 in **~5 ms/weight**, so build-time subsetting adds
-  negligible wall-clock.
+- **Exact-subset sizes:** a clean exact subset (no unused substitution features) is **~6 KB/weight**
+  (real woff2, `pyftsubset --flavor=woff2`), vs ~30 KB for today's latin asset. The dominant levers are
+  (a) exact glyph set and (b) **dropping unused *substitution* features** (`calt`/`frac`/`numr`/`dnom`/
+  `locl`) — if kept, they drag ~60 extra fraction/superscript/alternate glyphs into the subset via glyph
+  closure. Etoile has **no kerning** (`GPOS` empty; quasi-proportional spacing is in advance widths), so
+  there's no kern data to preserve.
+- **Subsetter = fonttools `pyftsubset`, not `hb-subset`.** `hb-subset` writes SFNT only — it does **not**
+  emit woff2 regardless of file extension (verified: its `.woff2` output has TTF magic `0001 0000`).
+  `pyftsubset --flavor=woff2` produces real brotli woff2 (`wOF2`) in one step, subset + compress, in well
+  under a second — so build-time subsetting adds negligible wall-clock and needs no separate compressor.
 - **Therefore the page-weight gate is no longer the binding constraint.** Even 3 weights + a real italic
   (~20 KB) sit far under the ceiling.
 
@@ -61,7 +62,7 @@ weight, bytes are a non-issue; **leanness, not the gate, governs how many weight
 | Variants | Keep the owner's existing selections (a tweak of the official `IosevkaEtoile` plan) |
 | Variable vs static | **Static per-weight** (Iosevka has no VF build) |
 | Subsetting | **Build-time exact subset** in `build.sh` against rendered HTML (+ a safety floor), dropping unused substitution features |
-| Subsetter | **`hb-subset`** — vendored static build for CI, `apt` (`libharfbuzz-bin`) locally; **not** managed by `install-tools.sh`/`versions.env` |
+| Subsetter | **fonttools `pyftsubset`** (real woff2 in one step) via a pinned venv (`tools/font/requirements.txt`); provisioned in CI with a venv step, not `install-tools.sh`/`versions.env` |
 | Master artifact | Committed per-weight TTF master at **T4 coverage + a curated OT-feature menu** (~112 KB gz/weight): latin+European, Greek, Cyrillic, punctuation/currency/letterlike, arrows, math operators, box-drawing, geometric shapes, dingbats; plus typographic features (fractions, super/subscripts, ordinals, number styles, slashed zero, ligatures, case, localization, combining marks) **and coding ligatures** (calt/clig/dlig/rlig, for code blocks). cv##/ss## are not built (`noCvSs`). Produced by the container; source, not served |
 | Build host | **Containerized one-shot**; npm isolated in a throwaway image |
 | Iosevka pin | A **git tag**, pinned in the font pipeline (Containerfile / `build-font.sh`), **not** `versions.env` |
@@ -78,7 +79,7 @@ Two stages with very different cadence.
 1. `podman build` clones **pinned** Iosevka (`git clone --depth 1 --branch <tag>`), `npm install`, copies
    the owner's `private-build-plans.toml` (Etoile variants + the weights to ship), builds the static TTFs
    (`npm run build -- ttf::<plan>`; hinted — `ttfautohint` is in the image).
-2. Inside the image, `hb-subset` each weight's full TTF (~8 MB) down to the **T4 master** (ranges below),
+2. Inside the image, `pyftsubset` each weight's full TTF (~8 MB) down to the **T4 master** (ranges below),
    retaining a **curated OpenType-feature menu** (fractions, super/subscripts, ordinals, number styles,
    slashed zero, ligatures, case, localization, combining marks) **plus coding ligatures**
    (calt/clig/dlig/rlig, for code blocks) — ~112 KB gz/weight (vs ~87 KB with no features, ~392 KB with
@@ -103,12 +104,12 @@ Inserted after `hugo --minify` (so rendered HTML exists) and before the checks:
 
 1. Collect the codepoints used across `public/**/*.html` (strip tags/script/style, unescape entities) and
    union with a **safety floor**: printable ASCII (U+0020–007E) + the design's known symbols (`· – — ’ …
-   © → ◐`). The floor means routine edits never need a font rebuild.
-2. For each committed master, run **`hb-subset`** to that codepoint set with the **retained layout-feature
-   set chosen by the FE review** (default: drop all — `--layout-features='' --no-layout-closure` — since
-   Iosevka's substitution features otherwise drag in fraction/superscript/alternate glyphs, ~10 KB vs
-   ~17 KB). `hb-subset` (≥12) writes **woff2 directly**; no separate compress step. Output to
-   `public/fonts/` under a **stable filename** (~10 KB/weight, ~5 ms).
+   © → ◐`). A shared `scripts/font-codepoints.py` produces this set, so the shipper and the coverage
+   verifier can't drift. The floor means routine edits never need a font rebuild.
+2. For each committed master, run **`pyftsubset --flavor=woff2`** to that codepoint set with the
+   **retained layout-feature set chosen by the FE review** (default: drop all — `--layout-features=''
+   --no-layout-closure` — since Iosevka's substitution features otherwise drag in fraction/superscript/
+   alternate glyphs). Output to `public/fonts/` under a **stable filename** (~6 KB/weight, real woff2).
 
 Because the subset is regenerated from a broad master against the *actual* content on every build, the
 shipped font always matches the page — no stale-subset tofu for anything the master covers. (Glyphs
@@ -116,24 +117,27 @@ outside the master's bounded coverage fall back to the system font, exactly as t
 
 ### Site integration (the only authored files that change)
 
-- `assets/scss/main.scss` `@font-face`: keep `font-family: "Iosevka Etoile"`, point `src` at the
-  stable `/fonts/…` path, set `font-weight` to the shipped value(s) (e.g. `400`, or one `@font-face` per
-  shipped weight). Keep `font-display: swap`. The font is referenced by absolute path, not Hugo's
-  fingerprinted pipeline — consistent with today's `static/fonts/` → `public/fonts/` model.
+- `assets/scss/main.scss` `@font-face` + font stacks: rename the CSS family to `"Iosevka Custom"` (3
+  spots), point `src` at the stable `/fonts/…` path, set `font-weight` to the shipped value(s) (e.g.
+  `400`, or one `@font-face` per shipped weight). Keep `font-display: swap`. The font is referenced by
+  absolute path, not Hugo's fingerprinted pipeline — consistent with today's `static/fonts/` →
+  `public/fonts/` model.
 - `layouts/_partials/head.html`: preload `href` → the stable filename (`type="font/woff2"`).
 
 ## Subsetter sourcing
 
-`build.sh` requires `hb-subset` on `PATH`:
+`build.sh` subsets with `pyftsubset` from a **pinned fonttools venv**, located via `FONT_PYTHON` (default
+`python3`). Pins live in `tools/font/requirements.txt` (`fonttools==4.63.0`, `brotli==1.2.0`).
 
-- **Locally:** `apt install libharfbuzz-bin`.
-- **CI (`ubuntu-latest` runner, `.forgejo/workflows/build.yml`):** a **vendored static `hb-subset`** made
-  available to the build job. It is produced once (the font container has the toolchain to build HarfBuzz
-  static) and pinned; the workflow places it on `PATH` alongside the `install-tools.sh` binaries.
+- **Locally:** a venv (see Prerequisites) with `FONT_PYTHON` exported to its `python`.
+- **CI (`ubuntu-latest`, `.forgejo/workflows/build.yml`):** a workflow step creates a venv, `pip install`s
+  the pinned requirements, and exports `FONT_PYTHON` via `$GITHUB_ENV` before `build.sh` runs. The publish
+  job is unchanged — it consumes the already-built `public/` and needs no subsetter.
 
-This is deliberately outside the `versions.env`/`install-tools.sh` release-asset model (HarfBuzz publishes
-no Linux `hb-subset` release binary). The exact CI wiring (workflow step vs. baked image) is a plan
-detail; the contract is "a pinned static `hb-subset` is on `PATH` in CI."
+This is deliberately outside the `versions.env`/`install-tools.sh` release-asset model (fonttools is a
+Python package, not a single release binary). We considered a vendored static `hb-subset`, but `hb-subset`
+cannot emit woff2, so a binary-only path would also need `woff2_compress` — fonttools does subset + woff2
+in one pinned tool and removes the static-compile and glibc-portability risk.
 
 ## Pinning
 
@@ -141,7 +145,7 @@ detail; the contract is "a pinned static `hb-subset` is on `PATH` in CI."
   **Not** in `versions.env`: `install-tools.sh --update` rewrites `versions.env` with only its four
   hardwired tools, which would silently delete an `IOSEVKA_VERSION` line. Bumping Iosevka is a manual edit
   + a `build-font.sh` run.
-- **hb-subset:** pinned as the vendored static binary (CI) / whatever `apt` provides (local dev).
+- **fonttools/brotli:** pinned in `tools/font/requirements.txt`, installed into a venv locally and in CI.
 
 Pinned tag + committed `private-build-plans.toml` + committed masters give **functional** reproducibility.
 Iosevka builds aren't byte-reproducible; we don't claim that.
@@ -180,9 +184,11 @@ rebuilds the needed master weights and `main.scss` declares the matching `@font-
 - **Master coverage bound (T4).** Content using a glyph outside T4 (CJK, rare scripts, exotic symbols)
   falls back to the system font — much wider than today's latin asset, but still bounded. Widen the range
   + rebuild (container) if that ever bites.
-- **`hb-subset` vs fonttools parity.** The spike used fonttools; the pipeline uses `hb-subset`. Sizes are
-  in the same ballpark, but the feature-dropping flags must be set explicitly (the spike showed unused
-  substitution features otherwise inflate the subset ~2×).
+- **Feature-dropping flags must be explicit.** The default shipped subset passes `--layout-features=''
+  --no-layout-closure`; without them, Iosevka's substitution features drag ~60 extra glyphs into the
+  subset (~2× size), so the flags are load-bearing, not cosmetic.
+- **Python in the build path.** `build.sh` and CI depend on a pinned fonttools venv — the agreed tradeoff
+  for one-tool real-woff2 output (vs a static `hb-subset` + `woff2_compress` binary pair).
 - **Sole-shared-asset assumption.** The headroom math assumes CSS/JS stay inlined. If a future change
   externalizes CSS, the per-page budget shifts.
 
