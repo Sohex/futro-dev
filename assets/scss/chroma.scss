@@ -1,0 +1,24 @@
+// Syntax highlighting palette — "Literals in green" (see
+// docs/superpowers/specs/2026-06-08-code-highlighting-design.md).
+// Colours are var() references so the light/dark theme swap recolours code.
+// Inlined per-page only on pages with code (head.html, gated on hasCode).
+.chroma {
+  // Comments — recede.
+  .c, .ch, .cm, .c1, .cs, .cp, .cpf {
+    color: var(--fg-muted);
+    font-style: italic;
+  }
+  // Keywords (incl. type keywords) — structure via weight, not colour.
+  .k, .kc, .kd, .kn, .kp, .kr, .kt {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  // Strings — the one accent lands on literal values.
+  .s, .sa, .sb, .sc, .dl, .sd, .s2, .se, .sh, .si, .sx, .sr, .s1, .ss {
+    color: var(--accent);
+  }
+  // Numbers — also literal values.
+  .m, .mb, .mf, .mh, .mi, .il, .mo {
+    color: var(--accent);
+  }
+}

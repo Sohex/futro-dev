@@ -1,0 +1,2 @@
+{{- .Page.Store.Set "hasCode" true -}}
+{{ highlight (trim .Inner "\n") .Type .Options }}

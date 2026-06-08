@@ -14,7 +14,8 @@ disableKinds = ["taxonomy", "term"]
   limit = 20
 
 [markup.highlight]
-  codeFences = false       # plain code blocks; class-based chroma can come later
+  codeFences = true        # class-based chroma; palette inlined per-page (see render hook)
+  noClasses = false        # emit <span class>, NOT inline style= (CSP requires this)
 
 [params]
   description = "Notes on infrastructure, platforms, and running things well."
