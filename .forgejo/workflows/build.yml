@@ -9,7 +9,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Forgejo exposes the GitHub-compatible `github.event.*` payload fields.
+      # Same-repo PRs build the PR head commit; all other events build `github.sha`.
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.repository.full_name && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Confirm same-repo PR checkout SHA
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.repository.full_name
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          checked_out="$(git rev-parse HEAD)"
+          echo "checked out ${checked_out}"
+          test "$checked_out" = "$PR_HEAD_SHA"
 
       - name: Install pinned toolchain
         run: |
@@ -33,6 +46,31 @@ jobs:
           name: site
           path: public/
           include-hidden-files: true
+
+  publish-pr:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.repository.full_name
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: site
+          path: public
+
+      - name: Build and push PR artifact image
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          readarray -t pr_tags < <(./scripts/pr-image-lifecycle.sh pr-tags "$PR_NUMBER" "$PR_HEAD_SHA")
+          docker build --push -f Containerfile \
+            -t "registry.int.futro.dev/futro-dev:${pr_tags[0]}" \
+            -t "registry.int.futro.dev/futro-dev:${pr_tags[1]}" \
+            .
 
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -61,3 +99,6 @@ jobs:
         run: |
           curl -fsS -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
             -d "deploy ${{ github.sha }}" https://ntfy.int.futro.dev/site-deploy
+
+      - name: Clean up merged PR artifact images
+        run: ./scripts/pr-image-lifecycle.sh cleanup

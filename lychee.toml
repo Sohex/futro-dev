@@ -1,5 +1,7 @@
 exclude = [
   "linkedin\\.com",
+  "github\\.com/Sohex",
 ]
 include_mail = false
 max_retries = 3
+method = "head"
