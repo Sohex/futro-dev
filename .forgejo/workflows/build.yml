@@ -16,6 +16,12 @@ jobs:
           ./scripts/install-tools.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      - name: Font subsetter (fonttools)
+        run: |
+          python3 -m venv "$HOME/.font-venv"
+          "$HOME/.font-venv/bin/pip" install -q -r tools/font/requirements.txt
+          echo "FONT_PYTHON=$HOME/.font-venv/bin/python" >> "$GITHUB_ENV"
+
       - name: Build site
         run: ./scripts/build.sh
 
