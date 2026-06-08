@@ -18,7 +18,7 @@ disableKinds = ["taxonomy", "term"]
 
 [params]
   description = "Notes on infrastructure, platforms, and running things well."
-  email = "futro.conor@gmail.com"
+  email = "conor@futro.dev"
   matrix = "@conor:futro.dev"
 
 [[params.social]]
