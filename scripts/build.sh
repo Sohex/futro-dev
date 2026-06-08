@@ -13,6 +13,12 @@ hugo --minify --panicOnWarning
 FONT_PYTHON="${FONT_PYTHON:-python3}"
 "$FONT_PYTHON" scripts/font-inline.py public
 
+# --- CSP: inject a per-page hash-based Content-Security-Policy <meta> into each page ---
+# After font-inline so the @font-face block is present and gets hashed; before brotli so the
+# .br copies carry the meta. Hashes every inline <style>/executable <script> (stdlib only) and
+# FAILS THE BUILD on any construct a hash-based, 'unsafe-inline'-free policy cannot cover.
+"$FONT_PYTHON" scripts/csp-inline.py public
+
 typst compile --root . typst/resume.typ public/resume.pdf
 
 # --- brotli precompression: write quality-11 .br siblings for Caddy's `precompressed br` ---
