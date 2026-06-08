@@ -189,16 +189,19 @@ every §2 token group** — it is not enough to show one Python block, because a
 lexer won't emit all the comment/keyword/string/number sub-classes the palette
 selects. Recommended language set and what each contributes:
 
+Sub-classes below are what the pinned hugo's lexers actually emit (verified by
+render), not the theoretical maximum a language *could* produce:
+
 | Fence language | Exercises (sub-classes) |
 |---|---|
-| `python` | keywords `.k .kc .kn`, strings `.s1 .s2`, f-string interp/escape `.si .se`, docstring `.sd`, decorator name, comments `.c1`, float/int `.mf .mi` |
-| `go` | declaration/type keywords `.kd .kt`, block comments `.cm`, backtick strings `.sb`, hex `.mh` |
-| `bash` | hashbang comment `.ch`, line comment `.c1`, strings, builtins |
-| `c` (or `toml`) | preprocessor `.cp .cpf` (C `#include`) **or** config strings/numbers/comments (toml) |
+| `python` | keywords `.k` (`def`/`for`/`return`) `.kn` (`import`), docstring `.s2`, f-string affix/interp `.sa .si`, comments `.c1`, float/int `.mf .mi` |
+| `go` | declaration/type keywords `.kd .kt`, block comment `.cm`, backtick string `.s` (plain, not `.sb`), hex `.mh` |
+| `bash` | hashbang `.cp`, line comment `.c1`, string `.s2`, int `.mi` |
+| `toml` | comment `.c1`, string `.s2`, numbers `.mi .mf` |
 
 The exact languages may shift, but the set must, between them, produce a token of
-each of the four styled groups so the verification light/dark check actually proves
-the palette. Front-matter `date` uses a real date; this post counts toward the
+each of the four styled groups (comment, keyword, string, number) so the
+verification light/dark check actually proves the palette. Front-matter `date` uses a real date; this post counts toward the
 posts RSS feed (`/posts/index.xml`) like any other.
 
 ## CSP interaction: zero script changes
