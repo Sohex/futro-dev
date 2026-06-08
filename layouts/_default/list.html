@@ -5,7 +5,8 @@
   {{ range .Pages.ByDate.Reverse }}
   <li>
     <a href="{{ .RelPermalink }}">{{ .Title }}</a>
-    {{ if not .Date.IsZero }}<time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "Jan 2, 2006" }}</time>{{ end }}
+    {{ if and (not .Date.IsZero) (ne .Section "projects") }}<time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "Jan 2, 2006" }}</time>{{ end }}
+    {{ with .Description }}<p class="item-summary">{{ . }}</p>{{ end }}
   </li>
   {{ end }}
 </ul>

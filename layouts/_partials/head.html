@@ -3,6 +3,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ if not .IsHome }}{{ .Title }} · {{ end }}{{ site.Title }}</title>
   <meta name="description" content="{{ .Description | default site.Params.description }}">
+  <link rel="canonical" href="{{ .Permalink }}">
+  {{ $isArticle := and (eq .Kind "page") (eq .Section "posts") }}
+  <meta property="og:site_name" content="{{ site.Title }}">
+  <meta property="og:title" content="{{ if not .IsHome }}{{ .Title }} · {{ end }}{{ site.Title }}">
+  <meta property="og:description" content="{{ .Description | default site.Params.description }}">
+  <meta property="og:type" content="{{ cond $isArticle "article" "website" }}">
+  <meta property="og:url" content="{{ .Permalink }}">
+  {{ if $isArticle }}<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ end }}
   <link rel="icon" href="data:image/svg+xml;base64,{{ os.ReadFile "static/favicon.svg" | base64Encode }}" type="image/svg+xml">
   <script>
     (function () {
@@ -15,4 +23,14 @@
   {{ with site.GetPage "/posts" }}{{ with .OutputFormats.Get "rss" -}}
   <link rel="alternate" type="application/rss+xml" title="{{ site.Title }} — posts" href="{{ .Permalink }}">
   {{- end }}{{ end }}
+  {{ if .IsHome }}
+  <script type="application/ld+json">{{ dict
+    "@context" "https://schema.org"
+    "@type" "Person"
+    "name" site.Title
+    "url" site.BaseURL
+    "jobTitle" "DevOps / Platform Engineer"
+    "sameAs" (apply site.Params.social "index" "." "url")
+    | jsonify | safeJS }}</script>
+  {{ end }}
 </head>
