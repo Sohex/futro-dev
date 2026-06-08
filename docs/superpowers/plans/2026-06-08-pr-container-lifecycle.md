@@ -16,7 +16,7 @@
 | --- | --- |
 | `scripts/pr-image-lifecycle.sh` | Generate PR tags, extract merged PR number from commit text, filter Zot tag lists, and delete matching PR tags from Zot. |
 | `scripts/test-pr-image-lifecycle.sh` | Local script tests for tag generation, PR-number extraction, and cleanup tag filtering. |
-| `.forgejo/workflows/build.yml` | Add same-repo PR image publishing and post-deploy merged-PR cleanup. Keep artifact actions pinned to v3. |
+| `.forgejo/workflows/build.yml` | Checkout same-repo PR heads explicitly, add same-repo PR image publishing, and add post-deploy merged-PR cleanup. Keep artifact actions pinned to v3. |
 | `docs/superpowers/plans/2026-06-08-pr-container-lifecycle.md` | This implementation plan. |
 
 The helper script is intentionally kept separate from workflow YAML so the non-trivial parsing can be tested without running Forgejo Actions. The workflow only passes event values through environment variables and calls the helper.
@@ -341,11 +341,43 @@ github.event.pull_request.number
 github.event.pull_request.head.sha
 github.event.pull_request.head.repo.full_name
 github.event.repository.full_name
+github.sha
 ```
 
 Expected: Forgejo documents that `github` is equivalent to `forgejo`, and that `github.event` contains the webhook payload. If an expression name differs on this Forgejo version, use the actual event payload path and update the workflow below consistently.
 
-- [ ] **Step 2: Add the `publish-pr` job after `build` and before `publish`**
+- [ ] **Step 2: Make same-repo PR checkout identity explicit in the `build` job**
+
+Modify the existing first checkout step in `.forgejo/workflows/build.yml` from:
+
+```yaml
+      - uses: actions/checkout@v6
+```
+
+to:
+
+```yaml
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.repository.full_name && github.event.pull_request.head.sha || github.sha }}
+```
+
+Then add this step immediately after checkout:
+
+```yaml
+      - name: Confirm same-repo PR checkout SHA
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.repository.full_name
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          checked_out="$(git rev-parse HEAD)"
+          echo "checked out ${checked_out}"
+          test "$checked_out" = "$PR_HEAD_SHA"
+```
+
+For same-repo PRs, the `site` artifact now represents the exact commit named by `pr-N-<sha>`. Fork PRs still run build and verification, but they use the normal event SHA and never run `publish-pr`.
+
+- [ ] **Step 3: Add the `publish-pr` job after `build` and before `publish`**
 
 Modify `.forgejo/workflows/build.yml` so the `jobs:` block contains this new job between the existing `build` and `publish` jobs:
 
@@ -356,6 +388,8 @@ Modify `.forgejo/workflows/build.yml` so the `jobs:` block contains this new job
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: actions/download-artifact@v3
         with:
@@ -382,7 +416,7 @@ Keep the existing `publish` job's condition as:
 
 Do not change `actions/upload-artifact@v3` or `actions/download-artifact@v3`; Forgejo needs the classic artifact API.
 
-- [ ] **Step 3: Validate workflow YAML syntax**
+- [ ] **Step 4: Validate workflow YAML syntax**
 
 Run:
 
@@ -396,7 +430,7 @@ Expected: either `actionlint` exits 0 with no output, or the fallback prints:
 YAML-OK
 ```
 
-- [ ] **Step 4: Run helper tests again**
+- [ ] **Step 5: Run helper tests again**
 
 Run:
 
@@ -415,7 +449,7 @@ PASS: cleanup tag filtering
 pr-image-lifecycle tests OK
 ```
 
-- [ ] **Step 5: Commit PR publish workflow**
+- [ ] **Step 6: Commit PR publish workflow**
 
 ```bash
 git add .forgejo/workflows/build.yml
@@ -427,7 +461,28 @@ git commit -m "ci: publish preview images for same-repo PRs"
 **Files:**
 - Modify: `.forgejo/workflows/build.yml`
 
-- [ ] **Step 1: Add cleanup after the deploy trigger**
+- [ ] **Step 1: Decide whether low-complexity squash cleanup is available**
+
+Inspect the push event payload and local Forgejo CLI help before editing cleanup behavior:
+
+```bash
+python3 - <<'PY'
+import json
+import os
+path = os.environ.get("GITHUB_EVENT_PATH")
+if not path or not os.path.exists(path):
+    print("GITHUB_EVENT_PATH unavailable outside Forgejo Actions")
+else:
+    payload = json.load(open(path))
+    for key in ("commits", "head_commit", "repository", "ref"):
+        print(f"{key}: {'present' if key in payload else 'missing'}")
+PY
+fj pr --help
+```
+
+Expected outside CI: the Python snippet prints `GITHUB_EVENT_PATH unavailable outside Forgejo Actions`, and `fj pr --help` lists available PR commands. During implementation, if `fj` exposes a simple command that maps the current main commit SHA to the merged PR number, add that lookup to `merged_pr_from_git()` before commit-message parsing and add one test fixture for its output shape. If there is no one-command lookup, do not add squash cleanup in this implementation; merge commits remain the guaranteed cleanup path.
+
+- [ ] **Step 2: Add cleanup after the deploy trigger**
 
 Modify the existing main-only `publish` job so this step appears immediately after `Trigger site deploy`:
 
@@ -446,7 +501,7 @@ curl ntfy deploy trigger
 scripts/pr-image-lifecycle.sh cleanup
 ```
 
-- [ ] **Step 2: Validate workflow YAML syntax**
+- [ ] **Step 3: Validate workflow YAML syntax**
 
 Run:
 
@@ -460,7 +515,7 @@ Expected: either `actionlint` exits 0 with no output, or the fallback prints:
 YAML-OK
 ```
 
-- [ ] **Step 3: Verify cleanup skips direct-push messages**
+- [ ] **Step 4: Verify cleanup skips direct-push messages**
 
 Run:
 
@@ -470,7 +525,7 @@ scripts/pr-image-lifecycle.sh extract-pr-number "direct commit to main"
 
 Expected: no output, exit 0.
 
-- [ ] **Step 4: Verify cleanup extracts Forgejo merge PR numbers**
+- [ ] **Step 5: Verify cleanup extracts Forgejo merge PR numbers**
 
 Run:
 
@@ -484,7 +539,7 @@ Expected:
 12
 ```
 
-- [ ] **Step 5: Commit cleanup workflow**
+- [ ] **Step 6: Commit cleanup workflow**
 
 ```bash
 git add .forgejo/workflows/build.yml
@@ -494,7 +549,7 @@ git commit -m "ci: clean up merged PR preview images"
 ## Task 5: Final Static Verification and Documentation Check
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-06-08-pr-container-lifecycle.md`
+- Modify only if tracking checkbox progress: `docs/superpowers/plans/2026-06-08-pr-container-lifecycle.md`
 
 - [ ] **Step 1: Run helper tests**
 
@@ -543,6 +598,7 @@ Expected:
 The diff adds only:
 - scripts/pr-image-lifecycle.sh
 - scripts/test-pr-image-lifecycle.sh
+- explicit same-repo PR head checkout and checkout SHA assertion in the build job
 - publish-pr job for same-repo PRs
 - post-deploy cleanup step in the main publish job
 ```
@@ -600,6 +656,24 @@ pr-N
 pr-N-<head-sha>
 ```
 
+Capture the first PR head SHA and image digest:
+
+```bash
+FIRST_HEAD_SHA=$(git rev-parse HEAD)
+digest_for() {
+  curl -fsSI \
+    -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+    "https://registry.int.futro.dev/v2/futro-dev/manifests/$1" \
+    | awk 'BEGIN{IGNORECASE=1} /^Docker-Content-Digest:/ {gsub(/\r/,"",$2); print $2}'
+}
+FIRST_SHA_DIGEST=$(digest_for "pr-N-${FIRST_HEAD_SHA}")
+FIRST_MOVING_DIGEST=$(digest_for "pr-N")
+test -n "$FIRST_SHA_DIGEST"
+test "$FIRST_SHA_DIGEST" = "$FIRST_MOVING_DIGEST"
+```
+
+Replace `N` with the PR number. Expected: both `test` commands exit 0, proving `pr-N` points at the same digest as `pr-N-<first-head-sha>`.
+
 - [ ] **Step 4: Push a second same-PR commit**
 
 Make a harmless docs-only commit or amend this plan's checkbox progress, then push:
@@ -627,6 +701,22 @@ pr-N
 pr-N-<first-head-sha>
 pr-N-<second-head-sha>
 ```
+
+Confirm the moving `pr-N` tag now points at the second commit's image, while the first SHA tag still points at its original digest:
+
+```bash
+SECOND_HEAD_SHA=$(git rev-parse HEAD)
+SECOND_SHA_DIGEST=$(digest_for "pr-N-${SECOND_HEAD_SHA}")
+SECOND_MOVING_DIGEST=$(digest_for "pr-N")
+FIRST_SHA_DIGEST_AFTER=$(digest_for "pr-N-${FIRST_HEAD_SHA}")
+
+test -n "$SECOND_SHA_DIGEST"
+test "$SECOND_SHA_DIGEST" = "$SECOND_MOVING_DIGEST"
+test "$FIRST_SHA_DIGEST" = "$FIRST_SHA_DIGEST_AFTER"
+test "$FIRST_SHA_DIGEST" != "$SECOND_SHA_DIGEST"
+```
+
+Replace `N` with the PR number. Expected: all `test` commands exit 0. If the last comparison fails because the two commits produced byte-identical site images, confirm the two SHA-specific tags exist and note that the image content did not change; the mutable tag check still passes if `pr-N` equals `pr-N-<second-head-sha>`.
 
 - [ ] **Step 6: Merge the PR with a merge commit**
 
@@ -669,11 +759,12 @@ Spec coverage:
 - Same-repo PR publishing: Task 3 adds the job condition and PR tag push.
 - Dual tag model: Task 1 generates `pr-N` and `pr-N-<sha>`; Task 3 pushes both.
 - No fork publishing: Task 3 same-repository condition enforces it.
+- PR image identity: Task 3 checks out same-repo PR heads explicitly and verifies `git rev-parse HEAD` matches the PR head SHA before building.
 - Main publish unchanged: Task 3 keeps the existing main `publish` condition; Task 4 only appends cleanup after deploy.
-- Merge-commit cleanup: Task 1 parses `(#N)`; Task 4 wires cleanup after deploy.
+- Merge-commit cleanup: Task 1 parses `(#N)`; Task 4 investigates low-complexity squash support and wires cleanup after deploy.
 - Zot deletion behavior: Task 1 uses `DELETE /v2/futro-dev/manifests/<tag>`, accepts `2xx` and `404`, fails other statuses.
 - Static verification: Tasks 2, 3, 4, and 5 cover helper behavior and YAML parsing.
-- Live verification: Task 6 covers PR publish, mutable tag update, merge, main publish, and cleanup.
+- Live verification: Task 6 covers PR publish, mutable tag digest movement, immutable SHA tag retention, merge, main publish, and cleanup.
 
 Placeholder scan: no unresolved placeholders are required to implement the plan. Values marked `N`, `<head-sha>`, and `<first-head-sha>` are live verification values discovered from the PR being tested.
 
