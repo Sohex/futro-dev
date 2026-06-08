@@ -14,3 +14,8 @@ FONT_PYTHON="${FONT_PYTHON:-python3}"
 "$FONT_PYTHON" scripts/font-inline.py public
 
 typst compile --root . typst/resume.typ public/resume.pdf
+
+# --- brotli precompression: write quality-11 .br siblings for Caddy's `precompressed br` ---
+# After the PDF, so /resume.pdf is on disk (it's skipped as already-compressed). Uses the same
+# FONT_PYTHON venv (the brotli module ships there for fonttools' woff2 support).
+"$FONT_PYTHON" scripts/brotli-precompress.py public
