@@ -1,5 +1,28 @@
 {{ define "main" }}
+{{ $maskLight := os.ReadFile "assets/headshot-mask-150-light.webp" | base64Encode }}
+{{ $maskDark := os.ReadFile "assets/headshot-mask-150-dark.webp" | base64Encode }}
+<style>
+  .intro .headshot {
+    float: right;
+    width: 150px;
+    height: 155px;
+    margin: 2.65rem 0 0.6rem 1.6rem;
+    background-color: var(--fg);
+    image-rendering: pixelated;
+    -webkit-mask: var(--headshot-mask) 0 0 / 150px 155px no-repeat;
+    mask: var(--headshot-mask) 0 0 / 150px 155px no-repeat;
+  }
+  :root { --headshot-mask: url("data:image/webp;base64,{{ $maskLight }}"); }
+  :root[data-theme="dark"] { --headshot-mask: url("data:image/webp;base64,{{ $maskDark }}"); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --headshot-mask: url("data:image/webp;base64,{{ $maskDark }}"); }
+  }
+  @media (max-width: 600px) {
+    .intro .headshot { float: none; display: block; margin: 0 auto 1.5rem; }
+  }
+</style>
 <section class="intro">
+  <span class="headshot" aria-hidden="true"></span>
   <h1>{{ site.Title }}</h1>
   {{ .Content }}
 </section>
