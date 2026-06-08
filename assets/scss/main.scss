@@ -1,11 +1,11 @@
 $column: 42rem;
 
 @font-face {
-  font-family: "Iosevka Etoile";
+  font-family: "Iosevka Custom";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/iosevka-etoile-latin.woff2") format("woff2");
+  src: url("/fonts/iosevka-custom.woff2") format("woff2");
 }
 
 @mixin dark {
@@ -39,7 +39,7 @@ body {
   margin: 0 auto;
   padding: 2.25rem 1.5rem 4rem;
   max-width: $column;
-  font-family: "Iosevka Etoile", ui-monospace, "Cascadia Mono", monospace;
+  font-family: "Iosevka Custom", ui-monospace, "Cascadia Mono", monospace;
   font-size: 1.125rem;
   line-height: 1.7;
   background: var(--bg);
@@ -114,7 +114,7 @@ hr {
 }
 
 code {
-  font-family: "Iosevka Etoile", ui-monospace, "Cascadia Mono", monospace;
+  font-family: "Iosevka Custom", ui-monospace, "Cascadia Mono", monospace;
   font-size: 0.82em;
   background: var(--bg-alt);
   padding: 0.15em 0.35em;
