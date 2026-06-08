@@ -99,3 +99,6 @@ jobs:
         run: |
           curl -fsS -H "Authorization: Bearer ${{ secrets.NTFY_DEPLOY_TOKEN }}" \
             -d "deploy ${{ github.sha }}" https://ntfy.int.futro.dev/site-deploy
+
+      - name: Clean up merged PR artifact images
+        run: ./scripts/pr-image-lifecycle.sh cleanup
