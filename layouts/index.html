@@ -38,6 +38,7 @@
     <li>
       <a href="{{ .RelPermalink }}">{{ .Title }}</a>
       <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "Jan 2006" }}</time>
+      {{ with .Description }}<p class="item-summary">{{ . }}</p>{{ end }}
     </li>
     {{ end }}
   </ul>
@@ -49,7 +50,10 @@
   <h2 class="section-label">Projects</h2>
   <ul class="item-list">
     {{ range . }}
-    <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+    <li>
+      <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+      {{ with .Description }}<p class="item-summary">{{ . }}</p>{{ end }}
+    </li>
     {{ end }}
   </ul>
 </section>

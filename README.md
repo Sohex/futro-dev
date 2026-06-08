@@ -30,31 +30,41 @@ hugo server          # live preview at http://localhost:1313  (note: /resume.pdf
 
 All content lives in `content/`. Pages are plain Markdown with YAML front matter.
 Adding or removing a file is the whole operation — no index to update; list pages
-(`/posts/`, `/projects/`) are generated automatically, sorted newest-first by `date`.
+(`/posts/`, `/projects/`) are generated automatically. Posts are sorted newest-first by
+`date`; projects are dateless (evergreen). New files are scaffolded from the templates in
+`archetypes/` (`posts.md`, `projects.md`).
 
 ## Add a post
 
-Create `content/posts/<slug>.md`. The filename is the URL slug
-(`content/posts/my-thing.md` → `/posts/my-thing/`).
+Scaffold with `hugo new content posts/<slug>.md` — the `archetypes/posts.md` template
+fills the title, today's `date`, `draft: true`, and an empty `description`. The filename is
+the URL slug (`content/posts/my-thing.md` → `/posts/my-thing/`).
 
 ```markdown
 ---
 title: "My post title"
 date: 2026-06-08
-description: "One-line summary used for the <meta> description and social cards."
+draft: true
+description: "One-line summary — used for the <meta> description, the listing blurb, and Open Graph tags."
 ---
 
 Body in Markdown. Internal links are root-relative, e.g. [resume](/resume/).
 ```
 
 - `date` drives ordering on `/posts/` and the "approx. N min read" estimate shown on the page.
+- `description` is required for the one-line blurb to appear under the title in lists; it
+  also feeds `<meta name="description">` and the Open Graph tags used for link previews.
+- Drafts are excluded from the build. Preview with `hugo server -D`; set `draft: false`
+  (or delete the line) to publish.
 - Posts are included in the RSS feed at `/posts/index.xml` automatically.
 
 ## Add a project
 
-Create `content/projects/<slug>.md` with the same front matter as a post
-(`title`, `date`, `description`). Projects are listed on `/projects/` but are **not**
-in any RSS feed (the section is HTML-only by design).
+Scaffold with `hugo new content projects/<slug>.md` — the `archetypes/projects.md`
+template fills `title`, `draft: true`, and an empty `description`. Projects have **no
+`date`**: they're an evergreen catalog, so neither the listing nor the page shows a date
+(revise the entry in place as the thing changes). They're listed on `/projects/` but are
+**not** in any RSS feed (the section is HTML-only by design).
 
 ## Remove a post or project
 

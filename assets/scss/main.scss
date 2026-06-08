@@ -205,6 +205,7 @@ em, i {
 
   li {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
     gap: 1.5rem;
@@ -216,6 +217,13 @@ em, i {
   a { text-decoration: none; color: var(--fg); }
   a:hover { color: var(--accent); }
   time { white-space: nowrap; }
+
+  .item-summary {
+    flex-basis: 100%;
+    margin: 0.2rem 0 0;
+    color: var(--fg-muted);
+    font-size: 0.95rem;
+  }
 }
 
 .intro h1 {
