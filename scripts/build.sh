@@ -30,6 +30,9 @@ mkdir -p public/fonts
 hash="$(sha256sum "$work/font.woff2" | cut -c1-8)"
 asset="iosevka-custom.${hash}.woff2"
 mv "$work/font.woff2" "public/fonts/${asset}"
-find public -name '*.html' -print0 | xargs -0 sed -i "s|/fonts/iosevka-custom\.woff2|/fonts/${asset}|g"
+find public -name '*.html' -print0 | xargs -0 --no-run-if-empty sed -i "s|/fonts/iosevka-custom\.woff2|/fonts/${asset}|g"
+# Fail loudly if the token wasn't rewritten — otherwise the immutable-cached HTML would
+# point at the never-served stable token (silent breakage of the whole scheme).
+grep -rq "/fonts/${asset}" public/index.html || { echo "ERROR: font token not rewritten in built HTML" >&2; exit 1; }
 
 typst compile --root . typst/resume.typ public/resume.pdf
