@@ -34,6 +34,10 @@ There are no unit tests. Verification = `build.sh` then `check.sh`. Build order 
 - **RSS:** the canonical feed is the posts section feed at `/posts/index.xml`; the site-level feed is disabled (`outputs` in `hugo.toml`).
 - **Content:** `content/posts/` and `content/projects/` (one `.md` per entry), `content/_index.md` homepage. No taxonomies (`disableKinds`).
 
+## Forge / PRs
+
+This repo is hosted on a self-hosted Forgejo instance (`git.int.futro.dev`), not GitHub — `gh` does not work here. Use the `fj` CLI for forge operations (PRs, issues, releases, actions): e.g. `fj pr create --base main --head <branch> --body "..."`, `fj pr merge <n> --method merge --delete`.
+
 ## CI / deploy (`.forgejo/workflows/build.yml`)
 
 Forgejo Actions, not GitHub Actions (`.github/workflows/` is empty). Quirks that will bite if "fixed":
