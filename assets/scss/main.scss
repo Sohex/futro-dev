@@ -1,13 +1,5 @@
 $column: 42rem;
 
-@font-face {
-  font-family: "Iosevka Custom";
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("/fonts/iosevka-custom.woff2") format("woff2");
-}
-
 @mixin dark {
   --bg: #171511;
   --bg-alt: #201d17;
