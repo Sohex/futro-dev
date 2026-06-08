@@ -3,6 +3,7 @@
   <header>
     <h1>{{ .Title }}</h1>
     {{ if not .Date.IsZero }}<time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2, 2006" }}</time>{{ end }}
+    {{ if eq .Section "posts" }}<span class="read-time">approx. {{ .ReadingTime }} min read</span>{{ end }}
   </header>
   {{ .Content }}
 </article>
