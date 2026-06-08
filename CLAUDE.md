@@ -21,7 +21,7 @@ There are no unit tests. Verification = `build.sh` then `check.sh`. Build order 
 ## Hard constraints
 
 - **Toolchain ethos: pinned single binaries only.** No npm, no JVM, no CSS frameworks anywhere in the build path. Versions are pinned in `versions.env`. Do not introduce package-manager dependencies.
-- **Page weight CI gate:** each page ≤ 75 KiB gzipped (page HTML + all shared CSS/JS/fonts), enforced by `scripts/check-page-weight.sh`.
+- **Page weight CI gate:** each page ≤ 14500 bytes brotli-served (page HTML + all shared CSS/JS/fonts), so every page fits in the initial TCP congestion window (IW10); home page held tighter at 10 KiB. Enforced by `scripts/check-page-weight.sh`.
 - **JavaScript:** the dark-mode toggle (`assets/js/theme.js`) is the only JS on the site. Keep it that way.
 - **Strict builds:** `refLinksErrorLevel = "ERROR"` + `--panicOnWarning` — broken internal refs or any Hugo warning fails the build.
 - Lighthouse 100 across all four mobile categories is the development bar (checked manually, deliberately not CI-gated).
