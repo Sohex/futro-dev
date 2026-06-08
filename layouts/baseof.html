@@ -8,6 +8,6 @@
   </main>
   {{ partial "footer.html" . }}
   {{ $js := resources.Get "js/theme.js" | minify }}
-  <script>{{ $js.Content | safeHTML }}</script>
+  <script>{{ $js.Content | safeJS }}</script>
 </body>
 </html>
