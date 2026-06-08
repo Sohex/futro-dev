@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-BUDGET=16384       # 16 KiB, every page
+BUDGET=14500       # every page: fit in the initial TCP congestion window (IW10 ≈ 10×1460 B)
 HOME_BUDGET=10240  # 10 KiB, the home page (public/index.html) specifically
 
 # Served weight: the brotli sibling Caddy actually ships, or the raw file where
