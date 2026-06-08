@@ -36,7 +36,7 @@ No PR tag is used for deployment. Deployment is still driven only by the main br
 
 ### Pull request publish
 
-Add a `publish-pr` job that runs only for `pull_request` events after the existing `build` job succeeds.
+Add a `publish-pr` job that runs only for same-repository `pull_request` events after the existing `build` job succeeds. PRs from forks are not trusted for registry publishing and should skip `publish-pr`; they can still run the build and verification checks.
 
 The job downloads the `site` artifact into `public/`, then runs a single `docker build --push -f Containerfile` with both PR tags:
 
@@ -47,7 +47,7 @@ docker build --push -f Containerfile \
   .
 ```
 
-The workflow should use Forgejo's pull request fields for `PR_NUMBER` and `PR_HEAD_SHA`. The implementation plan must verify the exact expression names against Forgejo Actions before editing the workflow.
+The workflow should use Forgejo's pull request fields for `PR_NUMBER`, `PR_HEAD_SHA`, and the same-repository check. The implementation plan must verify the exact expression names against Forgejo Actions before editing the workflow.
 
 `publish-pr` failures should fail the PR check. Once PR images are part of the workflow contract, a PR that cannot publish its preview image is not fully green.
 
@@ -64,7 +64,9 @@ Cleanup intentionally happens after the main image push. If cleanup breaks, it m
 
 ## Cleanup strategy
 
-The cleanup step identifies the pull request number that was merged by the current main commit. The first implementation should use the most reliable Forgejo-provided metadata available in a `push` workflow. If that is unavailable, use the merge commit message convention for Forgejo merge commits, such as extracting `#N` from a message like `Merge pull request ... (#N) ...`.
+The cleanup step identifies the pull request number that was merged by the current main commit. Cleanup is guaranteed for Forgejo merge commits that include the PR number in the commit message, such as extracting `#N` from `Merge pull request ... (#N) ...`.
+
+Squash merge support is desirable if it is low-complexity. The implementation plan should first check whether Forgejo exposes enough push-event metadata or a simple `fj`/Forgejo API lookup to map the pushed main commit back to the merged PR. If that mapping is straightforward, include squash merge cleanup. If it requires broad API plumbing or stored state, leave squash merge support out of the first implementation and document that squash merges skip cleanup until Zot retention removes the PR tags.
 
 If no pull request number can be found, cleanup should log that decision and exit successfully. This avoids failing normal direct pushes to `main` or unusual merge formats that have no PR image lifecycle to clean up.
 
@@ -73,7 +75,7 @@ When a PR number is found, cleanup deletes:
 - `pr-N`
 - every tag matching `pr-N-*`
 
-The deletion flow should list tags from Zot, filter them locally, and call Zot's registry API to delete each matching reference. Zot supports deleting an image manifest by reference at:
+The deletion flow should list all matching tags from Zot before issuing any delete calls, then call Zot's registry API to delete each matching reference. Zot supports deleting an image manifest by reference at:
 
 ```text
 DELETE /v2/{name}/manifests/{reference}
@@ -89,7 +91,7 @@ The cleanup script should treat `404` for a tag as non-fatal, because the tag ma
 
 ## Retention fallback
 
-Registry-side retention is a useful safety net but not the primary lifecycle mechanism. Zot should eventually have a policy for `futro-dev` that bounds `pr-*` tags by age or count. That protects registry storage if a main cleanup step is skipped or broken.
+Registry-side retention is an external operational recommendation, not an implementation requirement for this repo. Zot should eventually have a policy for `futro-dev` that bounds `pr-*` tags by age or count. That protects registry storage if a main cleanup step is skipped or broken.
 
 Retention must not replace explicit cleanup, because it is not tied to merge completion and may delete images for open PRs if configured too aggressively.
 
@@ -98,7 +100,7 @@ Retention must not replace explicit cleanup, because it is not tied to merge com
 - PR build or verification failure: no PR image is pushed.
 - PR image publish failure: PR workflow fails.
 - Main image publish failure: deploy trigger and cleanup do not run.
-- Deploy trigger failure: existing behavior applies; cleanup should not run before a successful main image push, but whether it runs after a failed deploy trigger is an implementation choice. Prefer keeping the initial sequence simple: deploy trigger first, cleanup second.
+- Deploy trigger failure: cleanup does not run. Keep the initial sequence simple: main image push, deploy trigger, cleanup.
 - Cleanup cannot identify PR number: log and exit successfully.
 - Cleanup finds no matching PR tags: log and exit successfully.
 - Cleanup delete returns `404`: log and continue.
@@ -117,6 +119,11 @@ Static verification:
   - `latest`
   - a main SHA tag
 - Confirm the filter for PR `12` selects only `pr-12` and tags beginning `pr-12-`.
+- Validate PR number extraction against sample main commit messages:
+  - Forgejo merge commit containing `(#12)` selects PR `12`.
+  - Direct push with no PR marker selects no PR.
+  - Squash merge message selects a PR only if the chosen Forgejo metadata/API lookup supports it.
+  - Malformed `#` references select no PR.
 
 Live verification:
 
