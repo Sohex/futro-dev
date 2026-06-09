@@ -38,10 +38,9 @@ Absolutely not — it was certainly fun to build around as a restriction, though
 The homepage is gated even more tightly at 10 KB so I can claim membership in
 the 10 KB club.
 
-> What actually makes up a sub-16 KB webpage?
+> What actually makes up a sub-10 KB webpage?
 
-Prior to the addition of this table (and your question, anonymous interlocutor)
-the breakdown for this post looked like this:
+Prior to the addition of this table the breakdown for this post looked like this:
 
 | Component | On disk | On the wire |
 |---|--:|--:|
