@@ -1,7 +1,7 @@
 ---
 title: "How this site ships"
 date: 2026-06-03
-description: "A colophon: Hugo and Typst, a font subset inlined per page, a FROM scratch image, and the self-hosted pipeline that serves it and observes it."
+description: "A colophon: Hugo and Typst, a font subset inlined per page, a FROM scratch image, and the pipeline that serves it and observes it."
 ---
 
 This site is intentionally boring, which took a little work.
