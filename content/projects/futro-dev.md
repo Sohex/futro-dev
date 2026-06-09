@@ -19,9 +19,10 @@ small showcase of how I like to ship software:
   my own registry; CI then fires an ntfy push that triggers the pull. The files
   are served by static-web-server behind Caddy. Deploys are immutable,
   rollbacks are an image tag.
-- **Observe**: zero client-side analytics. Caddy access logs flow through
-  Vector into VictoriaMetrics, with a realtime Perses dashboard and alerting,
-  plus GoAccess for traffic analytics.
+- **Observe**: zero client-side analytics. Caddy access logs become
+  request-count metrics in VictoriaMetrics via Vector, with a realtime Perses
+  dashboard; `vmalert` routes alerts through ntfy, and GoAccess reads the raw
+  logs for traffic analytics.
 
 Source: [github.com/Sohex/futro-dev](https://github.com/Sohex/futro-dev) —
 write-up in [How this site ships](/posts/how-this-site-ships/).
