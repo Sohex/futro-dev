@@ -38,6 +38,20 @@ Absolutely not — it was certainly fun to build around as a restriction, though
 The homepage is gated even more tightly at 10 KB so I can claim membership in
 the 10 KB club.
 
+> What actually makes up a sub-16 KB webpage?
+
+Prior to the addition of this table (and your question, anonymous interlocutor)
+the breakdown for this post looked like this:
+
+| Component | On disk | On the wire |
+|---|--:|--:|
+| Font (per-page `woff2` subset, base64) | 5,877 B | 4,419 B |
+| HTML &amp; text | 8,104 B | 3,034 B |
+| CSS | 4,413 B | 1,265 B |
+| JavaScript (the dark-mode toggle) | 590 B | 239 B |
+| CSP `<meta>` | 386 B | 257 B |
+| **Total** | **19,370 B** | **9,130 B** |
+
 > That's great, but how is the sausage made?
 
 The pages are built by [Hugo] with a hand-written theme (I assume someone has
