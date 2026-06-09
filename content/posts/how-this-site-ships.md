@@ -32,10 +32,11 @@ the pull, so a deploy is one notification and an image swap.
 On the server those files are served by
 [static-web-server](https://static-web-server.net/) behind
 [Caddy](https://caddyserver.com/), which terminates TLS out front. Caddy's
-access logs are the only telemetry: [Vector](https://vector.dev/) ships them to
-VictoriaMetrics, a [Perses](https://perses.dev/) dashboard renders them in
-realtime and alerts off the same data, and [GoAccess](https://goaccess.io/)
-turns the raw logs into traffic analytics. Nothing on the site phones home;
+access logs are the only telemetry: [Vector](https://vector.dev/) derives
+request-count metrics from them into VictoriaMetrics, a
+[Perses](https://perses.dev/) dashboard renders those in realtime, and
+`vmalert` raises any alerts back out through the same ntfy.
+[GoAccess](https://goaccess.io/) reads the raw logs for traffic analytics. Nothing on the site phones home;
 there is no client-side analytics at all.
 
 The box is a dedicated server I already run. There's a good argument that a
