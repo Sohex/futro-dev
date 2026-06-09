@@ -1,0 +1,25 @@
+{{- /* Emit column alignment as a class, never an inline style= (CSP forbids inline styles). */ -}}
+<table>
+{{- with .THead }}
+  <thead>
+  {{- range . }}
+    <tr>
+    {{- range . }}
+      <th{{ with .Alignment }} class="a-{{ . }}"{{ end }}>{{ .Text }}</th>
+    {{- end }}
+    </tr>
+  {{- end }}
+  </thead>
+{{- end }}
+{{- with .TBody }}
+  <tbody>
+  {{- range . }}
+    <tr>
+    {{- range . }}
+      <td{{ with .Alignment }} class="a-{{ . }}"{{ end }}>{{ .Text }}</td>
+    {{- end }}
+    </tr>
+  {{- end }}
+  </tbody>
+{{- end }}
+</table>
