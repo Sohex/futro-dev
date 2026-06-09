@@ -5,10 +5,10 @@
   .intro { padding-top: 2.75rem; }
   .intro h1 { margin-top: 0; }
   .intro .headshot {
-    float: right;
+    display: block;
     width: 120px;
     height: 124px;
-    margin: 0 0 0.75rem 1.75rem;
+    margin: 0 auto 1.5rem;
     background-color: var(--fg);
     image-rendering: pixelated;
     -webkit-mask: var(--headshot-mask) 0 0 / 120px 124px no-repeat;
@@ -21,13 +21,18 @@
   }
   @media (max-width: 600px) {
     .intro { padding-top: 1.75rem; }
-    .intro .headshot { float: none; display: block; margin: 0 auto 1.5rem; }
+  }
+  @media (min-width: 601px) {
+    .intro .headshot { float: right; margin: 0.9rem 0 0.75rem 1.75rem; }
+    .intro-text p:not(:first-of-type) { clear: right; }
   }
 </style>
 <section class="intro">
   <span class="headshot" aria-hidden="true"></span>
-  <h1>{{ site.Title }}</h1>
-  {{ .Content }}
+  <div class="intro-text">
+    <h1>{{ site.Title }}</h1>
+    {{ .Content }}
+  </div>
 </section>
 
 {{ with first 5 (where site.RegularPages "Section" "posts") }}
