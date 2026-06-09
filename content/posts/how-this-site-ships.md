@@ -23,7 +23,7 @@ within the initial TCP congestion window of the originating request.
 When a client connects to a server, the server is permitted to send back some
 data before receiving acknowledgement from the client side. Specifically, per
 [RFC 6928], this window is generally set at 10 segments totalling a maximum of
-14600B, which 14.5 KB is conveniently just shy of (you can stop keeping it in
+14600 B, which 14.5 KB is conveniently just shy of (you can stop keeping it in
 mind now).
 
 > Great, but what does that mean for me?
