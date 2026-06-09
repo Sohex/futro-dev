@@ -2,6 +2,8 @@
 title: Home
 ---
 
-I’m a systems and cloud architect always striving to build quality from first principles. I like to build things properly the first time around. That means I don’t look for the best solution, but rather the right one. I see how all the pieces interconnect and understand what needs to be done to keep them in sync. 
+I’m a systems & cloud architect building quality from first principles.
+
+My specialties are cloud-native platforms and infrastructure as code. I believe in engineering the right solution, not an ambiguous best. Seeing how all the pieces interconnect, and keeping them in sync, is what I do.
 
 Look at [how this site ships](/posts/how-this-site-ships/) to see what I mean.
