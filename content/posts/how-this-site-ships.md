@@ -90,7 +90,7 @@ constraints. For me, that's a win.
 [Iosevka]: https://typeof.net/Iosevka/
 [Typst]: https://typst.app/
 [Forgejo]: https://forgejo.org/
-[RFC 6928]: https://www.rfc-editor.org/rfc/rfc6928
+[RFC 6928]: https://datatracker.ietf.org/doc/html/rfc6928
 [lychee]: https://github.com/lycheeverse/lychee
 [htmltest]: https://github.com/wjdp/htmltest
 [ntfy]: https://ntfy.sh/
