@@ -278,11 +278,12 @@ article > header {
 }
 
 .expertise {
-  columns: 2;
-  gap: 2rem;
-  padding-left: 1.2rem;
+  list-style: none;
+  padding-left: 0;
   font-size: 0.95rem;
 }
+.expertise li { margin-bottom: 0.4rem; }
+.expertise strong { font-weight: 400; color: var(--accent); }
 
 .resume-header {
   p { margin: 0.2rem 0; }
@@ -298,6 +299,5 @@ article > header {
 @media (max-width: 600px) {
   body { padding-top: 1.5rem; }
   .intro h1 { font-size: 2.25rem; }
-  .expertise { columns: 1; }
   .item-list li { flex-direction: column; gap: 0; }
 }

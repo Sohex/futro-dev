@@ -1,7 +1,7 @@
 name: Conor Futro
 title: DevOps · Cloud · Platform Engineer
 location: Broomfield, CO
-email: conor@futro.dev 
+email: conor@futro.dev
 website: https://futro.dev
 links:
   - name: GitHub
@@ -9,39 +9,68 @@ links:
   - name: LinkedIn
     url: https://www.linkedin.com/in/cfutro
 summary: >-
-  Principal-level engineer and cloud architect with nearly a decade of
-  professional experience designing and building resilient, secure, and
-  performant infrastructure for mission-critical systems. Proven expertise
-  in cloud-native technologies, automating the full SDLC, and championing
-  a culture of engineering excellence.
+  DevOps and platform engineer specializing in resilient, secure, cloud-native
+  infrastructure for mission-critical systems. Across professional roles and,
+  more recently, self-directed work, I design the automation and architecture
+  that let teams ship safely and often. Recent work includes production-grade
+  systems software in Rust and a fully self-hosted, observable deployment
+  pipeline. Depth across the Kubernetes ecosystem, IaC, CI/CD, and cloud and
+  hybrid infrastructure.
 expertise:
-  - Cloud-Native Architecture
-  - Infrastructure as Code (IaC)
-  - CI/CD & GitOps
-  - System & Network Design
-  - DevSecOps & Compliance
-  - High-Availability & DR
-  - Observability & Monitoring
-  - Kubernetes Ecosystem
-  - AWS, GCP & Hybrid Cloud
-  - Terraform & Pulumi
-  - Vault & IAM Security
-  - Go, Python & Bash
+  - group: Languages
+    items: [Rust, Go, Python, Bash]
+  - group: Cloud & Infrastructure
+    items: [AWS, GCP, Hybrid Cloud, Linux, Networking]
+  - group: Orchestration & IaC
+    items: [Kubernetes, Helm, Terraform, Ansible, Vault, CI/CD, GitOps]
+  - group: Architecture & Practices
+    items: [Cloud-Native Architecture, High-Availability & DR, Observability, DevSecOps, Test Automation]
+projects:
+  - name: musefs
+    url: https://github.com/Sohex/musefs
+    bullets:
+      - >-
+        Designed and built a read-only FUSE filesystem in Rust (multi-crate
+        workspace) that presents a re-tagged, reorganized music library without
+        modifying or duplicating a single byte of the original audio.
+      - >-
+        Drove correctness with a deep automated-testing stack: property and
+        fuzz testing of all five format parsers, mutation testing to prove the
+        suite actually kills bugs, and a purpose-built second FUSE filesystem
+        (latencyfs) that injects controlled backing-store latency to exercise
+        the serve path under slow disks and NFS.
+      - >-
+        Engineered the release pipeline for portable distribution: static
+        cross-compiled musl and glibc binaries across x86_64 and aarch64 with a
+        glibc 2.17 floor, plus a serve path hardened with a blocking-read worker
+        pool and optional kernel FUSE passthrough.
+  - name: futro.dev
+    url: https://github.com/Sohex/futro-dev
+    bullets:
+      - >-
+        Self-hosted static site shipped as an immutable FROM scratch container
+        image, deployed by registry pull with image-tag rollbacks.
+      - >-
+        Enforce a hard per-page budget in CI (under 14.5 KB brotli, home under
+        10 KB) so every page fits within the initial TCP congestion window, with
+        per-page font subsetting, hash-based CSP, and link and HTML validation
+        as gates.
+      - >-
+        Full server-side observability with zero client-side tracking: Caddy
+        logs to Vector to VictoriaMetrics, a Perses dashboard, and vmalert and
+        ntfy alerting.
 experience:
-  - role: Planned Career Sabbatical for Family Caregiving
+  - role: "Career Break: Family Caregiving"
     start: October 2020
     end: Present
     bullets:
       - >-
-        Made the decision to step away from full-time work to serve as the
-        primary caregiver for my mother during her battle with, and subsequent
-        passing from, cancer. Following this period, I have continued to care
-        for my grandmother with Alzheimer's while preparing for a return to
-        the industry.
+        Stepped away from full-time work as primary caregiver for my mother
+        through her cancer treatment and passing, and have since cared for my
+        grandmother with Alzheimer's while preparing to return to industry.
       - >-
-        Maintained deep engagement with technology through rigorous
-        self-study, building advanced homelab environments, and developing
-        personal projects to challenge myself and advance my skills.
+        Stayed hands-on throughout via self-directed engineering and a
+        production homelab (see Projects above).
   - role: Senior Cloud Engineer
     company: BillGO Inc.
     location: Fort Collins, CO

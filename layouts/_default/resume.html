@@ -15,8 +15,18 @@
 
 <h2 class="section-label">Areas of expertise</h2>
 <ul class="expertise">
-  {{ range $r.expertise }}<li>{{ . }}</li>{{ end }}
+  {{ range $r.expertise }}<li><strong>{{ .group }}:</strong> {{ delimit .items ", " }}</li>{{ end }}
 </ul>
+
+{{ with $r.projects }}
+<h2 class="section-label">Projects</h2>
+{{ range . }}
+<article class="job project">
+  <h3><a href="{{ .url }}">{{ .name }}</a></h3>
+  <ul>{{ range .bullets }}<li>{{ . }}</li>{{ end }}</ul>
+</article>
+{{ end }}
+{{ end }}
 
 <h2 class="section-label">Experience</h2>
 {{ range $r.experience }}
