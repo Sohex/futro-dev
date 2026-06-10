@@ -1,10 +1,10 @@
 #let r = yaml("/data/resume.yaml")
 
 #set document(title: r.name + " — resume", author: r.name)
-#set page(paper: "us-letter", margin: (x: 1.4cm, y: 1.1cm))
-#set text(font: "Iosevka Custom", size: 8.5pt)
-#set par(leading: 0.5em, spacing: 0.48em)
-#set list(spacing: 0.3em)
+#set page(paper: "us-letter", margin: (x: 1.5cm, y: 1.3cm))
+#set text(font: "Iosevka Custom", size: 10pt)
+#set par(leading: 0.6em, spacing: 0.6em)
+#set list(spacing: 0.4em)
 
 #show link: underline
 
@@ -47,7 +47,7 @@
       )
     ]
     #for b in p.bullets [- #b]
-    #v(0.08em)
+    #v(0.2em)
   ]
 ]
 
@@ -77,5 +77,5 @@
       #for b in e.bullets [- #b]
     ]
   ]
-  #v(0.08em)
+  #v(0.2em)
 ]
