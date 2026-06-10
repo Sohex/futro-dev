@@ -365,10 +365,16 @@ EOF
 Run: `./scripts/build.sh`
 Expected: clean build, no Hugo warning/panic.
 
-- [ ] **Step 2: Run all check gates**
+- [ ] **Step 2: Run all check gates and record the new post's measured weight**
 
 Run: `./scripts/check.sh`
 Expected: PASS — htmltest (no broken internal refs), lychee (the new external links above and the in-site cross-links all resolve), and `check-page-weight.sh` (every page ≤ 14500 bytes brotli; home ≤ 10 KiB).
+
+Regardless of pass/fail, **read off and note the brotli byte figure `check-page-weight.sh` reports for `posts/how-this-server-is-built`** (the box-drawing diagram is the heaviest single element added to the site and pulls new glyphs into that page's font subset, so this is the page with the least headroom). You'll report this number in Step 5 even on a pass, so the margin to 14500 is on the record.
+
+- [ ] **Step 2b: Confirm the diagram doesn't break mobile layout**
+
+The diagram is a fenced code block, so it renders inside a `<pre>`, which `assets/scss/main.scss:116` already styles with `overflow-x: auto`. Confirm the rendered `public/posts/how-this-server-is-built/index.html` puts the diagram in a `<pre>` (not a `<p>` or wrapped) so it scrolls horizontally on a narrow viewport rather than forcing page-wide horizontal scroll. A quick check: `grep -A2 '<pre' public/posts/how-this-server-is-built/index.html | head` should show the diagram's first line inside the `<pre><code>`. (No browser needed; this is a structural check. The horizontal-scroll-on-a-diagram behaviour is the same as any wide code block already on the site.)
 
 - [ ] **Step 3: If — and only if — the page-weight gate fails on `how-this-server-is-built`**
 
@@ -407,7 +413,7 @@ EOF
 
 - [ ] **Step 5: Report**
 
-State plainly: did `check.sh` pass, and which diagram (full or slim) is in the post. If anything was skipped or failed, say so with the output.
+State plainly: did `check.sh` pass; **the measured brotli weight of `posts/how-this-server-is-built` and its margin to the 14500-byte gate** (from Step 2); and which diagram (full or slim) ended up in the post. If anything was skipped or failed, say so with the output.
 
 ---
 
