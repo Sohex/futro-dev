@@ -91,7 +91,7 @@ if errors start spiking. [GoAccess] also reads the raw logs to generate basic
 traffic analytics.
 
 For more on the server this all runs on, and how all the services on it are set
-up, see [how this server is built] - forthcoming.
+up, see [how this server is built](/posts/how-this-server-is-built/).
 
 > Wow, that seems excessive. I just push my files to Netlify.
 
