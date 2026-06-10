@@ -22,25 +22,26 @@ observability, a self-hosted dependency-update bot — each walled off from the
 others. Here's the whole thing at a glance:
 
 ```
-              ┌─────────────────────────────────────────────┐
- edit → PR →  │ git repo, branch main                       │
-              └──────────────────┬──────────────────────────┘
-                                 │ ansible-pull (systemd timer, ~30 min)
-                                 ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ OVH dedicated box — Ubuntu 26.04                                    │
-│                                                                     │
-│  internet ─► :80/:443 edge Caddy ─► Authelia ─► public services     │
-│              (only open ports)      (jellyfin, navidrome, auth)     │
-│  tailnet ──► proxy Caddy on the Tailscale iface ─► private UIs      │
-│              (*arr, flood, metrics, vault, … — *.int.futro.dev)     │
-│                                                                     │
-│  rootless Podman stacks — Quadlet units, one unprivileged user each │
-│    edge  dns  proxy  media  downloads  vault  observ  cicd  …       │
-│                                                                     │
-│  storage   md0 (mdadm RAID1 + btrfs): / , /srv , container roots    │
-│            /data (separate btrfs span): media + torrents            │
-└─────────────────────────────────────────────────────────────────────┘
+  edit ▸ PR ▸ merge ──►  git repo, branch main  (the box's desired state)
+                              │
+                              │  no push-to-deploy — the box pulls itself in:
+                              │  ansible-pull, ~30-min systemd timer
+                              │  snapshot ▸ decrypt SOPS+age ▸ apply ▸ converged
+ ═════════════════════════════▼═══════════════════════════  OVH dedicated box
+                              │
+   rootless Podman stacks ────┤  one unprivileged user each, systemd-supervised
+     edge  dns  proxy  media  downloads  vault  observ  cicd
+                              │
+            two front doors:  │
+        ┌─────────────────────┴─────────────────────┐
+        ▼                                            ▼
+  internet ─► :80/:443 only                  tailnet ─► Tailscale only
+     edge Caddy ▸ Authelia                      proxy Caddy, tailnet iface
+     public services                            private UIs · *.int.futro.dev
+     jellyfin · navidrome                       *arr · flood · vault · metrics
+
+  storage   md0 = RAID1 + btrfs ─► / · /srv         (snapshotted, restic off-box)
+            /data = btrfs span   ─► media + torrents  (reflink / hardlink, no backup)
 ```
 
 ## Provisioning happens once
