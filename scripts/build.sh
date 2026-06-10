@@ -19,7 +19,7 @@ FONT_PYTHON="${FONT_PYTHON:-python3}"
 # FAILS THE BUILD on any construct a hash-based, 'unsafe-inline'-free policy cannot cover.
 "$FONT_PYTHON" scripts/csp-inline.py public
 
-typst compile --root . typst/resume.typ public/resume.pdf
+typst compile --root . --font-path tools/font/masters typst/resume.typ public/resume.pdf
 
 # --- brotli precompression: write quality-11 .br siblings for Caddy's `precompressed br` ---
 # After the PDF, so /resume.pdf is on disk (it's skipped as already-compressed). Uses the same

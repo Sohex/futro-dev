@@ -1,10 +1,10 @@
 #let r = yaml("/data/resume.yaml")
 
 #set document(title: r.name + " — resume", author: r.name)
-#set page(paper: "us-letter", margin: (x: 1.5cm, y: 1.3cm))
-#set text(size: 9.5pt)
-#set par(leading: 0.55em, spacing: 0.55em)
-#set list(spacing: 0.35em)
+#set page(paper: "us-letter", margin: (x: 1.4cm, y: 1.1cm))
+#set text(font: "Iosevka Custom", size: 8.5pt)
+#set par(leading: 0.5em, spacing: 0.48em)
+#set list(spacing: 0.3em)
 
 #show link: underline
 
@@ -31,12 +31,25 @@
 #r.summary
 
 #section("Areas of Expertise")
-#grid(
-  columns: (1fr, 1fr, 1fr),
-  column-gutter: 1em,
-  row-gutter: 0.3em,
-  ..r.expertise.map(item => [• #item]),
-)
+#for g in r.expertise [
+  #block(below: 0.4em)[*#g.group:* #g.items.join(", ")]
+]
+
+#if r.at("projects", default: ()) != () [
+  #section("Projects")
+  #for p in r.projects [
+    #block(sticky: true)[
+      #grid(
+        columns: (1fr, auto),
+        column-gutter: 1em,
+        [*#p.name*],
+        [#if p.at("url", default: "") != "" [#text(size: 8.5pt)[#link(p.url, p.url.replace("https://", "").replace("www.", ""))]]],
+      )
+    ]
+    #for b in p.bullets [- #b]
+    #v(0.08em)
+  ]
+]
 
 #section("Experience")
 #for job in r.experience [
@@ -64,5 +77,5 @@
       #for b in e.bullets [- #b]
     ]
   ]
-  #v(0.15em)
+  #v(0.08em)
 ]
