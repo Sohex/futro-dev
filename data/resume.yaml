@@ -30,20 +30,13 @@ projects:
     url: https://github.com/Sohex/musefs
     bullets:
       - >-
-        Designed and built a read-only FUSE filesystem in Rust (multi-crate
-        workspace) that presents a re-tagged, reorganized music library without
-        modifying or duplicating a single byte of the original audio.
+        Built a read-only FUSE filesystem (multi-crate Rust workspace, ~1,000 tests) that serves a re-tagged view of a music library by synthesizing metadata on the fly over positioned reads of immutable backing files, with SQlite as the tag store.
       - >-
-        Drove correctness with a deep automated-testing stack: property and
-        fuzz testing of all five format parsers, mutation testing to prove the
-        suite actually kills bugs, and a purpose-built second FUSE filesystem
-        (latencyfs) that injects controlled backing-store latency to exercise
-        the serve path under slow disks and NFS.
+        Designed the project's CI platform: a 15-job GitHub Actions matrix spanning Linux, macos, and FreeBSD, with AddressSanitizer/ThreadSanitizer runs, enforced coverage, coverage-guided fuzzing (9 libFuzzer targets), and a per-PR mutation-testing gate that verifies new tests detect injected faults.
       - >-
-        Engineered the release pipeline for portable distribution: static
-        cross-compiled musl and glibc binaries across x86_64 and aarch64 with a
-        glibc 2.17 floor, plus a serve path hardened with a blocking-read worker
-        pool and optional kernel FUSE passthrough.
+        Automated release engineering end to end: cross-compiled static musl and glibc-compatible binaries for x86_64/aarch64 via cargo-zigbuild, smoke-tested every artifact on glibc and Alpine hosts, and published container images and crates.io releases from a single tag push.
+      - >-
+        Maintained Python integrations (beets, MusicBrainz Picard, Lidarr) against a versioned SQLite contract, validated in CI by cross-language round-trip tests and a containerized end-to-end test against a live Lidarr instance.
   - name: futro.dev
     url: https://github.com/Sohex/futro-dev
     bullets:
